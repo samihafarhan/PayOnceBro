@@ -10,13 +10,13 @@ function App() {
         {/* Redirect root to /auth for now — replace with your landing page later */}
         <Route path="/" element={<Navigate to="/auth" replace />} />
 
-        {/* Add your protected routes here, e.g.:
+        Add your protected routes here, e.g.:
           <Route path="/dashboard" element={
             <AuthWrapper>
               <Dashboard />
             </AuthWrapper>
           } />
-        */}
+       
       </Routes>
     </Router>
   )
