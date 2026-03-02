@@ -4,6 +4,7 @@ import helmet from 'helmet'
 import morgan from 'morgan'
 import { errorHandler } from './middleware/errorMiddleware.js'
 import authRoutes from './routes/authRoutes.js'
+import restaurantRoutes from './routes/restaurantRoutes.js'
 
 const app = express()
 
@@ -27,6 +28,7 @@ app.use(express.json())
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
 
 app.use('/api/auth', authRoutes)
+app.use('/api/restaurants', restaurantRoutes)
 
 // Each member mounts their routes here in later sprints
 
