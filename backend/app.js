@@ -5,14 +5,13 @@ import morgan from 'morgan'
 import { errorHandler } from './middleware/errorMiddleware.js'
 import authRoutes from './routes/authRoutes.js'
 import restaurantRoutes from './routes/restaurantRoutes.js'
+import searchRoutes from './routes/searchRoutes.js'   // ← NEW
 
 const app = express()
 
 app.use(cors({
   origin: (origin, callback) => {
     const allowed = process.env.FRONTEND_URL
-    // In production, only allow the configured FRONTEND_URL
-    // In development, allow any localhost origin regardless of port
     if (!origin || origin === allowed || (!allowed && origin.startsWith('http://localhost'))) {
       callback(null, true)
     } else {
@@ -29,8 +28,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
 
 app.use('/api/auth', authRoutes)
 app.use('/api/restaurants', restaurantRoutes)
-
-// Each member mounts their routes here in later sprints
+app.use('/api/search', searchRoutes)   // ← NEW
 
 app.use(errorHandler)
 
