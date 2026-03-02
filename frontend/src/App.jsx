@@ -1,24 +1,48 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import Auth from './pages/auth/Auth.jsx'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { UrlProvider } from './context/AuthContext'
+
+// Auth pages (Member D)
+import Auth from './pages/auth/Auth'
+
+// Restaurant pages (Member C)
+import RestaurantLayout from './layouts/RestaurantLayout'
+import Dashboard from './pages/restaurant/Dashboard'
+import MenuManagement from './pages/restaurant/MenuManagement'
+
+// Protected route guard (Member D)
+import ProtectedRoute from './components/common/ProtectedRoute'
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/auth" element={<Auth />} />
+    <BrowserRouter>
+      <UrlProvider>
+        <Routes>
+          {/* Auth */}
+          <Route path="/auth" element={<Auth />} />
 
-        {/* Redirect root to /auth for now — replace with your landing page later */}
-        <Route path="/" element={<Navigate to="/auth" replace />} />
+          {/* Restaurant routes — Sprint 1 shell */}
+          <Route
+            path="/restaurant"
+            element={
+              <ProtectedRoute>
+                <RestaurantLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="menu" element={<MenuManagement />} />
+            <Route path="reviews" element={<div className="p-6 text-gray-500">Reviews — coming soon</div>} />
+          </Route>
 
-        {/* Add your protected routes here, e.g.:
-          <Route path="/dashboard" element={
-            <AuthWrapper>
-              <Dashboard />
-            </AuthWrapper>
-          } />
-        */}
-      </Routes>
-    </Router>
+          {/* Redirect /dashboard → /restaurant/dashboard for post-login nav */}
+          <Route path="/dashboard" element={<Navigate to="/restaurant/dashboard" replace />} />
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/auth" replace />} />
+        </Routes>
+      </UrlProvider>
+    </BrowserRouter>
   )
 }
 
