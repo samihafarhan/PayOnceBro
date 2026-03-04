@@ -85,3 +85,72 @@ export const updateOrderStatus = async (orderId, status) => {
   if (error) throw error
   return data
 }
+
+// ─── Menu Items ──────────────────────────────────────────────────────────────
+
+export const getMenuItems = async (restaurantId) => {
+  const { data, error } = await supabase
+    .from('menu_items')
+    .select('*')
+    .eq('restaurant_id', restaurantId)
+    .order('category', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
+
+export const createMenuItem = async (restaurantId, item) => {
+  const { data, error } = await supabase
+    .from('menu_items')
+    .insert({ ...item, restaurant_id: restaurantId })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export const updateMenuItem = async (restaurantId, itemId, updates) => {
+  const { data, error } = await supabase
+    .from('menu_items')
+    .update(updates)
+    .eq('id', itemId)
+    .eq('restaurant_id', restaurantId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export const deleteMenuItem = async (restaurantId, itemId) => {
+  const { error } = await supabase
+    .from('menu_items')
+    .delete()
+    .eq('id', itemId)
+    .eq('restaurant_id', restaurantId)
+  if (error) throw error
+}
+
+// ─── Restaurant Settings ──────────────────────────────────────────────────────
+
+export const updateRestaurantSettings = async (restaurantId, settings) => {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .update(settings)
+    .eq('id', restaurantId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ─── Restaurant Profile (public info) ────────────────────────────────────────
+
+export const updateRestaurantProfile = async (restaurantId, fields) => {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .update(fields)
+    .eq('id', restaurantId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
