@@ -117,3 +117,171 @@ export const updateOrderStatus = async (req, res, next) => {
     next(err)
   }
 }
+
+// ─── Menu Management ─────────────────────────────────────────────────────────
+
+/**
+ * GET /api/restaurants/menu
+ * Returns all menu items + key restaurant settings for the current owner.
+ */
+export const getMenu = async (req, res, next) => {
+  try {
+    const restaurant = await restaurantModel.getByOwner(req.user.id)
+    if (!restaurant) return res.status(404).json({ message: 'No restaurant found for this account' })
+    const items = await restaurantModel.getMenuItems(restaurant.id)
+    res.json({
+      items,
+      restaurant: {
+        avg_prep_time: restaurant.avg_prep_time ?? null,
+        max_orders_per_hour: restaurant.max_capacity_per_hour ?? null,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * POST /api/restaurants/menu
+ * Body: { name, category?, price, description? }
+ */
+export const addMenuItem = async (req, res, next) => {
+  try {
+    const restaurant = await restaurantModel.getByOwner(req.user.id)
+    if (!restaurant) return res.status(404).json({ message: 'No restaurant found for this account' })
+
+    const { name, category, price, description, image_url } = req.body
+    if (!name || price == null) {
+      return res.status(400).json({ message: 'name and price are required' })
+    }
+
+    const item = await restaurantModel.createMenuItem(restaurant.id, {
+      name,
+      category: category ?? null,
+      price: Number(price),
+      description: description ?? null,
+      image_url: image_url ?? null,
+      is_available: true,
+    })
+    res.status(201).json({ item })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * PUT /api/restaurants/menu/:itemId
+ * Body: any combination of { name, category, price, description, is_available }
+ */
+export const editMenuItem = async (req, res, next) => {
+  try {
+    const restaurant = await restaurantModel.getByOwner(req.user.id)
+    if (!restaurant) return res.status(404).json({ message: 'No restaurant found for this account' })
+
+    const { itemId } = req.params
+    const ALLOWED = ['name', 'category', 'price', 'description', 'is_available', 'image_url']
+    const updates = {}
+    ALLOWED.forEach((k) => {
+      if (req.body[k] !== undefined) updates[k] = req.body[k]
+    })
+    if (updates.price !== undefined) updates.price = Number(updates.price)
+
+    const item = await restaurantModel.updateMenuItem(restaurant.id, itemId, updates)
+    res.json({ item })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * DELETE /api/restaurants/menu/:itemId
+ */
+export const removeMenuItem = async (req, res, next) => {
+  try {
+    const restaurant = await restaurantModel.getByOwner(req.user.id)
+    if (!restaurant) return res.status(404).json({ message: 'No restaurant found for this account' })
+
+    await restaurantModel.deleteMenuItem(restaurant.id, req.params.itemId)
+    res.json({ message: 'Item deleted' })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * GET /api/restaurants/profile
+ * Returns the public profile fields for the current owner's restaurant.
+ */
+export const getProfile = async (req, res, next) => {
+  try {
+    const restaurant = await restaurantModel.getByOwner(req.user.id)
+    if (!restaurant) return res.status(404).json({ message: 'No restaurant found for this account' })
+    res.json({
+      profile: {
+        name:    restaurant.name    ?? '',
+        address: restaurant.address ?? '',
+        cuisine: restaurant.cuisine ?? '',
+        phone:   restaurant.phone   ?? '',
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * PUT /api/restaurants/profile
+ * Body: { name?, address?, cuisine?, phone? }
+ */
+export const updateProfile = async (req, res, next) => {
+  try {
+    const restaurant = await restaurantModel.getByOwner(req.user.id)
+    if (!restaurant) return res.status(404).json({ message: 'No restaurant found for this account' })
+
+    const ALLOWED = ['name', 'address', 'cuisine', 'phone']
+    const fields = {}
+    ALLOWED.forEach((k) => {
+      if (req.body[k] !== undefined) fields[k] = req.body[k]
+    })
+
+    if (Object.keys(fields).length === 0) {
+      return res.status(400).json({ message: 'No valid fields provided' })
+    }
+
+    const updated = await restaurantModel.updateRestaurantProfile(restaurant.id, fields)
+    res.json({
+      profile: {
+        name:    updated.name    ?? '',
+        address: updated.address ?? '',
+        cuisine: updated.cuisine ?? '',
+        phone:   updated.phone   ?? '',
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * PUT /api/restaurants/settings
+ * Body: { avg_prep_time?, max_orders_per_hour? }
+ */
+export const updateSettings = async (req, res, next) => {
+  try {
+    const restaurant = await restaurantModel.getByOwner(req.user.id)
+    if (!restaurant) return res.status(404).json({ message: 'No restaurant found for this account' })
+
+    const settings = {}
+    if (req.body.avg_prep_time != null) settings.avg_prep_time = Number(req.body.avg_prep_time)
+    if (req.body.max_orders_per_hour != null) settings.max_capacity_per_hour = Number(req.body.max_orders_per_hour)
+
+    if (Object.keys(settings).length === 0) {
+      return res.status(400).json({ message: 'No valid fields provided' })
+    }
+
+    const updated = await restaurantModel.updateRestaurantSettings(restaurant.id, settings)
+    res.json({ restaurant: updated })
+  } catch (err) {
+    next(err)
+  }
+}

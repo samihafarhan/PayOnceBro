@@ -12,7 +12,13 @@ const useFetch = (cb, options = {}) => {
             const result = await cb(...args)
             setData(result)
         } catch (err) {
-            setError(err)
+            // Prefer the backend's error message over the generic axios message
+            const message =
+                err?.response?.data?.message ||
+                err?.response?.data?.error ||
+                err?.message ||
+                'Something went wrong'
+            setError({ ...err, message })
         } finally {
             setLoading(false)
         }
