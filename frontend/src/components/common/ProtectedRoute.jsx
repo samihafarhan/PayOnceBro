@@ -1,36 +1,35 @@
-import React from 'react'
-import { BeatLoader } from 'react-spinners'
-import { useAuthCheck } from '../../context/AuthContext'
+import { Navigate, Outlet } from 'react-router-dom';
+import { UrlState } from '../../context/AuthContext';
+import { BeatLoader } from 'react-spinners';
 
-/**
- * Wraps any page/component that requires authentication.
- * Shows a spinner while the session resolves, then redirects
- * to /auth if the user is not logged in.
- *
- * Usage:
- *   <ProtectedRoute>
- *     <YourProtectedPage />
- *   </ProtectedRoute>
- */
-const ProtectedRoute = ({ children, customLoadingMessage = "Loading..." }) => {
-  const { isAuthenticated, loading: authLoading } = useAuthCheck()
+const ProtectedRoute = ({ role }) => {
+  const { user, isAuthenticated, loading, isSessionLoaded } = UrlState();
 
-  if (authLoading) {
+  // Wait until the Supabase session has been checked AND the user fetch has settled
+  const stillLoading = loading || !isSessionLoaded;
+  if (stillLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center">
-          <BeatLoader size={15} color="#3B82F6" />
-          <p className="mt-4 text-gray-600">{customLoadingMessage}</p>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4rem' }}>
+        <BeatLoader color="#1e293b" />
       </div>
-    )
+    );
   }
 
+  // Not logged in → send to auth
   if (!isAuthenticated) {
-    return null
+    return <Navigate to="/auth" replace />;
   }
 
-  return children
-}
+  // Wrong role → send to auth
+  const userRole = user?.role?.trim().toLowerCase();
+  const requiredRole = role?.trim().toLowerCase();
 
-export default ProtectedRoute
+  if (requiredRole && userRole !== requiredRole) {
+    console.warn('ProtectedRoute: Expected role:', requiredRole, 'but got:', userRole);
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <Outlet />;
+};
+
+export default ProtectedRoute;

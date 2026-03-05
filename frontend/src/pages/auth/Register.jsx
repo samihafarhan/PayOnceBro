@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
 } from "../../components/ui/card"
 import { Input } from '../../components/ui/input'
 import { Button } from '../../components/ui/button'
@@ -47,7 +47,14 @@ const Register = () => {
                 // Email confirmation required — stay on the page; the UI renders a notice below
                 return
             }
-            navigate(`/dashboard?${longlink ? `createNew=${longlink}` : ""}`)
+            // Navigate based on selected role
+            const role = formData.role
+            let destination = '/home'
+            if (role === 'restaurant_owner' || role === 'restaurant') destination = '/restaurant/dashboard'
+            else if (role === 'rider') destination = '/rider/dashboard'
+            else if (role === 'admin') destination = '/admin/analytics'
+
+            navigate(`${destination}${longlink ? `?createNew=${longlink}` : ""}`, { replace: true })
         }
     }, [data, error])
 
@@ -122,30 +129,30 @@ const Register = () => {
                     {errors.username && <Error message={errors.username} />}
                 </div>
                 <div className="space-y-1">
-                    <Input 
-                        name="email" 
-                        type="email" 
-                        placeholder="Enter Email" 
+                    <Input
+                        name="email"
+                        type="email"
+                        placeholder="Enter Email"
                         onChange={handleInputChange}
                         value={formData.email}
                     />
                     {errors.email && <Error message={errors.email} />}
                 </div>
                 <div className="space-y-1">
-                    <Input 
-                        name="password" 
-                        type="password" 
-                        placeholder="Enter Password" 
+                    <Input
+                        name="password"
+                        type="password"
+                        placeholder="Enter Password"
                         onChange={handleInputChange}
                         value={formData.password}
                     />
                     {errors.password && <Error message={errors.password} />}
                 </div>
                 <div className="space-y-1">
-                    <Input 
-                        name="confirmPassword" 
-                        type="password" 
-                        placeholder="Confirm Password" 
+                    <Input
+                        name="confirmPassword"
+                        type="password"
+                        placeholder="Confirm Password"
                         onChange={handleInputChange}
                         value={formData.confirmPassword}
                     />
@@ -155,9 +162,9 @@ const Register = () => {
                     <p className="text-sm font-medium">I am a...</p>
                     <div className="flex gap-2">
                         {[
-                            { value: 'user',              label: 'Customer' },
-                            { value: 'rider',             label: 'Rider' },
-                            { value: 'restaurant_owner',  label: 'Restaurant Owner' },
+                            { value: 'user', label: 'Customer' },
+                            { value: 'rider', label: 'Rider' },
+                            { value: 'restaurant_owner', label: 'Restaurant Owner' },
                         ].map(({ value, label }) => (
                             <button
                                 key={value}
