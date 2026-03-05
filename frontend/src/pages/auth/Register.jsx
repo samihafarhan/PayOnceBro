@@ -15,7 +15,6 @@ import * as Yup from 'yup'
 import useFetch from '../../hooks/useFetch'
 import { signup } from '../../services/authService'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { UrlState } from '../../context/AuthContext'
 
 const Register = () => {
     const [errors, setErrors] = useState([])
@@ -41,16 +40,22 @@ const Register = () => {
     }
 
     const { data, error, loading, fn: fnSignup } = useFetch(signup, formData)
-    const { fetchuser } = UrlState()
 
     useEffect(() => {
         if (data && !error) {
-            let dashboardPath = '/home'; // Default for users
-            if (formData.role === 'rider') dashboardPath = '/rider/dashboard';
-            if (formData.role === 'restaurant_owner' || formData.role === 'restaurant') dashboardPath = '/restaurant/dashboard';
-
-            navigate(`${dashboardPath}?${longlink ? `createNew=${longlink}` : ""}`)
-            fetchuser()
+<<<<<<< HEAD
+            if (data.requiresEmailConfirmation) {
+                // Email confirmation required — stay on the page; the UI renders a notice below
+                return
+            }
+            navigate(`/dashboard?${longlink ? `createNew=${longlink}` : ""}`)
+=======
+            if (data.requiresEmailConfirmation) {
+                // Email confirmation required — stay on the page; the UI renders a notice below
+                return
+            }
+            navigate(`/dashboard?${longlink ? `createNew=${longlink}` : ""}`)
+>>>>>>> e37108f92aaaeaedcefaabe81782e553b8022a50
         }
     }, [data, error])
 
@@ -97,6 +102,11 @@ const Register = () => {
                 <CardTitle>Sign Up</CardTitle>
                 <CardDescription>Create a new account to get started</CardDescription>
                 {error && <Error message={error.message} />}
+                {data?.requiresEmailConfirmation && (
+                    <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2 mt-1">
+                        Account created! Check your email and confirm before logging in.
+                    </p>
+                )}
             </CardHeader>
             <CardContent className="space-y-2">
                 <div className="space-y-1">

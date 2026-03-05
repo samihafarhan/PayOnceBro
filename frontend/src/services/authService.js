@@ -32,7 +32,9 @@ export async function signup({ email, password, role, username, full_name }) {
     })
   }
 
-  return data
+  // When Supabase requires email confirmation, session is null.
+  // Surface this so the UI can prompt the user instead of navigating away.
+  return { ...data, requiresEmailConfirmation: !data.session }
 }
 
 export async function getCurrentUser() {
@@ -53,6 +55,10 @@ export async function logout() {
   } catch {
     // Even if server-side logout fails, clear the local session
   }
-  await supabase.auth.signOut()
+  try {
+    await supabase.auth.signOut()
+  } catch {
+    // Ignore — local token is cleared regardless
+  }
   return true
 }

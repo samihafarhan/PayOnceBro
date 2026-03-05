@@ -25,15 +25,17 @@ const UrlProvider = ({children}) => {
             async (event, session) => {
                 if (event === 'INITIAL_SESSION') {
                     setIsSessionLoaded(true)
-                }
-                if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                    // Fetch user once on the initial session event (covers both
+                    // "already logged in on page load" and "not logged in" cases)
+                    fetchuser()
+                } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
                     fetchuser()
                 } else if (event === 'SIGNED_OUT') {
                     fetchuser()
                 }
             }
         )
-        fetchuser()
+        // Do NOT call fetchuser() here — INITIAL_SESSION always fires and handles it
         return () => subscription.unsubscribe()
     }, [])
 

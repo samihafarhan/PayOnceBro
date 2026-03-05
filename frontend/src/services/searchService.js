@@ -1,0 +1,30 @@
+import api from './api'
+
+/**
+ * searchFood — asks the backend to find food matching the query + filters.
+ *
+ * @param {string} query     - what the user typed ("burger", "pasta", etc.)
+ * @param {object} filters   - { minPrice, maxPrice, cuisine, userLat, userLng }
+ * @returns { results: [...], total: number }
+ */
+export const searchFood = async (query = '', filters = {}) => {
+  const params = new URLSearchParams()
+
+  if (query) params.set('q', query)
+  if (filters.minPrice) params.set('minPrice', filters.minPrice)
+  if (filters.maxPrice) params.set('maxPrice', filters.maxPrice)
+  if (filters.cuisine) params.set('cuisine', filters.cuisine)
+  if (filters.userLat) params.set('userLat', filters.userLat)
+  if (filters.userLng) params.set('userLng', filters.userLng)
+
+  const { data } = await api.get(`/search?${params.toString()}`)
+  return data
+}
+
+/**
+ * getCategories — fetches all food categories for the filter dropdown.
+ */
+export const getCategories = async () => {
+  const { data } = await api.get('/search/categories')
+  return data.categories ?? []
+}
