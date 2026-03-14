@@ -519,7 +519,7 @@ frontend/src/services/menuService.js
 
 ---
 
-## S1 — Feature 18: Dynamic Delivery Fee Engine (Member D) 🔲 TODO
+## S1 — Feature 18: Dynamic Delivery Fee Engine (Member D) ✅ DONE
 
 ### Goal
 Calculate delivery fees dynamically based on distance and clustering efficiency. Expose as an API endpoint so Member A's cart (Sprint 2) can call it.
@@ -603,12 +603,12 @@ RIDER_SPEED_KMH=30
 ```
 
 ### Sprint 1 Acceptance Checklist (Member D — F18)
-- [ ] `GET /api/health` returns 200
-- [ ] Supabase client initializes without error
-- [ ] Gemini client initializes without error
-- [ ] Cluster fee always less than sum of individual fees
-- [ ] `POST /api/delivery/fee` returns correct breakdown
-- [ ] Fee increases proportionally with distance
+- [x] `GET /api/health` returns 200
+- [x] Supabase client initializes without error
+- [x] Gemini client initializes without error
+- [x] Cluster fee always less than sum of individual fees
+- [x] `POST /api/delivery/fee` returns correct breakdown
+- [x] Fee increases proportionally with distance
 
 ---
 

@@ -6,6 +6,7 @@ import { errorHandler } from './middleware/errorMiddleware.js';
 import authRoutes from './routes/authRoutes.js';
 import restaurantRoutes from './routes/restaurantRoutes.js';
 import searchRoutes from './routes/searchRoutes.js';
+import deliveryRoutes from './routes/deliveryRoutes.js';
 
 const app = express();
 app.use(cors({
@@ -22,9 +23,11 @@ app.use(cors({
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/delivery', deliveryRoutes);
 app.use(errorHandler);
 
 export default app;
