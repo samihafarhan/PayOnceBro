@@ -1,6 +1,51 @@
+// backend/models/restaurantModel.js
+// ─── ADD these two functions to your existing restaurantModel.js ───────────────
+// The rest of your existing functions stay exactly as they are.
+
 import supabase from '../config/db.js'
 
-// Creates a new restaurant for the given owner
+// ─── NEW: needed by clusterController ─────────────────────────────────────────
+
+/**
+ * getByIds — fetch multiple restaurants by their IDs in one query.
+ * Used by checkCluster and getDeliveryFee to get lat/lng for calculations.
+ *
+ * Returns only the fields the clustering logic needs.
+ */
+export const getByIds = async (ids) => {
+  if (!ids || ids.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('id, name, lat, lng, avg_prep_time, avg_rating, address')
+    .in('id', ids)
+    .eq('is_active', true)
+
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * getAllActive — fetch ALL active restaurants.
+ * Used by getNearbyClusters to find all possible clusters near a user.
+ *
+ * Only returns restaurants that have lat/lng set — restaurants without
+ * coordinates cannot participate in distance-based clustering.
+ */
+export const getAllActive = async () => {
+  const { data, error } = await supabase
+    .from('restaurants')
+    .select('id, name, lat, lng, avg_prep_time, avg_rating, address, cuisine')
+    .eq('is_active', true)
+    .not('lat', 'is', null)    // only restaurants with location data
+    .not('lng', 'is', null)
+
+  if (error) throw error
+  return data ?? []
+}
+
+// ─── EXISTING functions below — keep as-is ────────────────────────────────────
+
 export const createRestaurant = async (ownerId, fields) => {
   const { data, error } = await supabase
     .from('restaurants')
@@ -11,7 +56,6 @@ export const createRestaurant = async (ownerId, fields) => {
   return data
 }
 
-// Returns the restaurant owned by this auth user
 export const getByOwner = async (ownerId) => {
   const { data, error } = await supabase
     .from('restaurants')
@@ -22,7 +66,6 @@ export const getByOwner = async (ownerId) => {
   return data
 }
 
-// All order_item rows that belong to this restaurant, with menu item names
 export const getOrderItemsByRestaurant = async (restaurantId) => {
   const { data, error } = await supabase
     .from('order_items')
@@ -38,7 +81,6 @@ export const getOrderItemsByRestaurant = async (restaurantId) => {
   return data ?? []
 }
 
-// Active orders (pending / accepted / preparing / pickup) for given IDs
 export const getActiveOrdersByIds = async (orderIds) => {
   const { data, error } = await supabase
     .from('orders')
@@ -50,7 +92,6 @@ export const getActiveOrdersByIds = async (orderIds) => {
   return data ?? []
 }
 
-// Today's delivered orders for the completed tab
 export const getCompletedOrdersByIds = async (orderIds) => {
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
@@ -65,7 +106,6 @@ export const getCompletedOrdersByIds = async (orderIds) => {
   return data ?? []
 }
 
-// Cluster rows for enriching clustered orders
 export const getClustersByIds = async (clusterIds) => {
   const { data, error } = await supabase
     .from('clusters')
@@ -75,7 +115,6 @@ export const getClustersByIds = async (clusterIds) => {
   return data ?? []
 }
 
-// Fetch a single order for status-transition validation
 export const getOrderById = async (orderId) => {
   const { data, error } = await supabase
     .from('orders')
@@ -96,8 +135,6 @@ export const updateOrderStatus = async (orderId, status) => {
   if (error) throw error
   return data
 }
-
-// ─── Menu Items ──────────────────────────────────────────────────────────────
 
 export const getMenuItems = async (restaurantId) => {
   const { data, error } = await supabase
@@ -140,8 +177,6 @@ export const deleteMenuItem = async (restaurantId, itemId) => {
   if (error) throw error
 }
 
-// ─── Restaurant Settings ──────────────────────────────────────────────────────
-
 export const updateRestaurantSettings = async (restaurantId, settings) => {
   const { data, error } = await supabase
     .from('restaurants')
@@ -152,8 +187,6 @@ export const updateRestaurantSettings = async (restaurantId, settings) => {
   if (error) throw error
   return data
 }
-
-// ─── Restaurant Profile (public info) ────────────────────────────────────────
 
 export const updateRestaurantProfile = async (restaurantId, fields) => {
   const { data, error } = await supabase

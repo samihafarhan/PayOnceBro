@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { UrlProvider, UrlState } from './context/AuthContext';
@@ -14,6 +13,7 @@ import MenuManagement from './pages/restaurant/MenuManagement';
 // User pages (Member A)
 import UserLayout from './layouts/UserLayout';
 import Search from './pages/user/Search';
+import Cart from './pages/user/Cart';
 
 // Protected route guard (Member D)
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -47,7 +47,7 @@ function App() {
             <Route element={<UserLayout />}>
               <Route path="/home" element={<Search />} />
               <Route path="/search" element={<Search />} />
-              <Route path="/cart" element={<div className="p-10 text-center text-xl text-gray-500 mt-20">🛒 Cart page is under construction (Member A)</div>} />
+              <Route path="/cart" element={<Cart />} />
               <Route path="/orders" element={<div className="p-10 text-center text-xl text-gray-500 mt-20">📦 My Orders page is under construction (Member A)</div>} />
             </Route>
           </Route>
@@ -84,7 +84,6 @@ const SmartRedirect = () => {
     }
     const role = user?.role?.trim().toLowerCase()
 
-    // Allow users to reach their dashboard when they hit the root URL
     if (role === 'restaurant_owner' || role === 'restaurant') {
       navigate('/restaurant/dashboard', { replace: true })
     } else if (role === 'rider') {
@@ -92,7 +91,7 @@ const SmartRedirect = () => {
     } else if (role === 'admin') {
       navigate('/admin/analytics', { replace: true })
     } else {
-      navigate('/home', { replace: true }) // default: customer
+      navigate('/home', { replace: true })
     }
   }, [user, loading, isSessionLoaded, navigate])
 
