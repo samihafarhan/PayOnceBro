@@ -10,6 +10,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { haversineDistance } from '../utils/geoUtils.js'
+import { calculate as calculateDeliveryFeeService } from './deliveryFeeService.js'
 
 // Default cluster radius from .env, fallback to 2 km
 const DEFAULT_RADIUS_KM = parseFloat(process.env.CLUSTER_RADIUS_KM) || 2
@@ -43,7 +44,7 @@ export const evaluateCluster = (restaurants, radiusKm = DEFAULT_RADIUS_KM) => {
       const b = restaurants[j]
 
       // Skip if either restaurant is missing coordinates
-      if (!a.lat || !a.lng || !b.lat || !b.lng) {
+      if (a.lat == null || a.lng == null || b.lat == null || b.lng == null) {
         return { eligible: false, reason: `Restaurant "${a.name || a.id}" or "${b.name || b.id}" is missing location data` }
       }
 
@@ -79,12 +80,12 @@ export const evaluateCluster = (restaurants, radiusKm = DEFAULT_RADIUS_KM) => {
 // Used by the search controller to rank results.
 // ─────────────────────────────────────────────────────────────────────────────
 export const sortByProximity = (items, userLat, userLng, radiusKm = DEFAULT_RADIUS_KM) => {
-  if (!userLat || !userLng) return items // no location → return unsorted
+  if (userLat == null || userLng == null) return items // no location → return unsorted
 
   return items
     .map((item) => {
       const r = item.restaurant
-      const distanceKm = (r?.lat && r?.lng)
+      const distanceKm = (r?.lat != null && r?.lng != null)
         ? haversineDistance(userLat, userLng, r.lat, r.lng)
         : null
 
@@ -217,31 +218,7 @@ export const getNearbyClusteredRestaurants = (
 // Returns: { fee, breakdown, savings }
 // ─────────────────────────────────────────────────────────────────────────────
 export const calculateDeliveryFee = (restaurants, userLat, userLng, isCluster) => {
-  const BASE_FEE          = parseFloat(process.env.BASE_DELIVERY_FEE)   || 20
-  const PER_KM_RATE       = parseFloat(process.env.PER_KM_RATE)         || 10
-  const DISCOUNT_RATE     = parseFloat(process.env.CLUSTER_DISCOUNT_RATE) || 0.6
-
-  // Per-restaurant fees (used for both non-cluster total and savings comparison)
-  const breakdown = restaurants.map((r) => {
-    const distKm = (r.lat && r.lng && userLat && userLng)
-      ? haversineDistance(userLat, userLng, r.lat, r.lng)
-      : 0
-    const fee = BASE_FEE + distKm * PER_KM_RATE
-    return { restaurantId: r.id, restaurantName: r.name, distanceKm: parseFloat(distKm.toFixed(2)), fee: parseFloat(fee.toFixed(2)) }
-  })
-
-  const normalTotal = breakdown.reduce((sum, b) => sum + b.fee, 0)
-
-  if (!isCluster) {
-    return { fee: parseFloat(normalTotal.toFixed(2)), breakdown, savings: 0 }
-  }
-
-  // Cluster fee: based on the farthest restaurant from user
-  const maxDist = Math.max(...breakdown.map((b) => b.distanceKm))
-  const clusterFee = parseFloat(((BASE_FEE + maxDist * PER_KM_RATE) * DISCOUNT_RATE).toFixed(2))
-  const savings    = parseFloat((normalTotal - clusterFee).toFixed(2))
-
-  return { fee: clusterFee, breakdown, savings }
+  return calculateDeliveryFeeService(restaurants, userLat, userLng, isCluster)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -265,7 +242,7 @@ export const estimateDeliveryTime = (restaurants, userLat, userLng) => {
   // Simple total distance: sum of (user→each restaurant) distances
   // In Sprint 3, this will use the optimized route from routeService
   const totalDistanceKm = restaurants.reduce((sum, r) => {
-    if (!r.lat || !r.lng || !userLat || !userLng) return sum
+    if (r.lat == null || r.lng == null || userLat == null || userLng == null) return sum
     return sum + haversineDistance(userLat, userLng, r.lat, r.lng)
   }, 0)
 

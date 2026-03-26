@@ -97,3 +97,49 @@ export const addRestaurantReviewResponse = async (req, res, next) => {
     next(err)
   }
 }
+
+// Workflow-compatible aliases
+export const create = createRestaurantRating
+
+export const getByRestaurant = async (req, res, next) => {
+  try {
+    const { id: restaurantId } = req.params
+    if (!restaurantId) {
+      return res.status(400).json({ message: 'restaurant id is required' })
+    }
+    const ratings = await ratingModel.listRestaurantReviews(restaurantId)
+    res.json(ratings)
+  } catch (err) {
+    next(err)
+  }
+}
+
+export const addResponse = async (req, res, next) => {
+  try {
+    const { id: ratingId } = req.params
+    const { responseText } = req.body
+
+    if (!responseText || !responseText.trim()) {
+      return res.status(400).json({ message: 'responseText is required' })
+    }
+
+    const restaurant = await restaurantModel.getByOwner(req.user.id)
+    if (!restaurant) {
+      return res.status(404).json({ message: 'No restaurant found for this account' })
+    }
+
+    const updated = await ratingModel.addRestaurantResponse({
+      ratingId,
+      restaurantId: restaurant.id,
+      responseText: responseText.trim(),
+    })
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Review not found for your restaurant' })
+    }
+
+    res.json({ rating: updated })
+  } catch (err) {
+    next(err)
+  }
+}

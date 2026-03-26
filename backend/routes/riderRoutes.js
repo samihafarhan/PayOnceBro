@@ -16,13 +16,13 @@ router.use(protect)
  * Fetch logged-in rider's full profile
  * NOTE: This must come BEFORE /:id routes to avoid parameter collision
  */
-router.get('/profile/me', getProfile)
+router.get('/profile/me', restrictTo('rider'), getProfile)
 
 /**
  * PUT /api/rider/location
  * Update rider's current GPS coordinates (called every 30s)
  */
-router.put('/location', updateLocation)
+router.put('/location', restrictTo('rider'), updateLocation)
 
 /**
  * GET /api/rider/:id/location

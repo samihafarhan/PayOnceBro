@@ -1,4 +1,5 @@
 import * as menuModel from '../models/menuModel.js'
+import { sortByProximity } from '../services/clusteringService.js'
 
 /**
  * Haversine distance formula — calculates distance between two GPS points.
@@ -87,24 +88,12 @@ export const search = async (req, res, next) => {
       }
     })
 
-    // Step 4: Sort results — cluster-eligible restaurants first, then by distance
-    enriched.sort((a, b) => {
-      // Cluster-eligible first (they get the discount badge!)
-      if (a.isClusterEligible && !b.isClusterEligible) return -1
-      if (!a.isClusterEligible && b.isClusterEligible) return 1
+    // Step 4: Sort via clustering service to keep ordering logic centralized.
+    const sorted = hasLocation
+      ? sortByProximity(enriched, userLatNum, userLngNum)
+      : [...enriched].sort((a, b) => a.menuItem.price - b.menuItem.price)
 
-      // Then sort by distance (closest first)
-      if (hasLocation) {
-        if (a.distanceKm !== null && b.distanceKm !== null) {
-          return a.distanceKm - b.distanceKm
-        }
-      }
-
-      // Default: sort by price
-      return a.menuItem.price - b.menuItem.price
-    })
-
-    res.json({ results: enriched, total: enriched.length })
+    res.json({ results: sorted, total: sorted.length })
   } catch (err) {
     next(err)
   }

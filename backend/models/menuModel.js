@@ -106,3 +106,18 @@ export const getCategories = async () => {
 
   return categories
 }
+
+/**
+ * getByIds — fetch menu items by IDs for order validation and pricing.
+ */
+export const getByIds = async (ids) => {
+  if (!Array.isArray(ids) || ids.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('menu_items')
+    .select('id, name, price, is_available, restaurant_id')
+    .in('id', ids)
+
+  if (error) throw error
+  return data ?? []
+}

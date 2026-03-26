@@ -15,7 +15,7 @@ import * as riderModel from '../models/riderModel.js'
 export const updateLocation = async (req, res, next) => {
   try {
     const { lat, lng } = req.body
-    const riderId = req.user.id
+    const userId = req.user.id
 
     // Validate inputs
     if (typeof lat !== 'number' || typeof lng !== 'number') {
@@ -27,7 +27,7 @@ export const updateLocation = async (req, res, next) => {
     }
 
     // Update in database
-    const location = await riderModel.updateLocation(riderId, lat, lng)
+    const location = await riderModel.updateLocationByUserId(userId, lat, lng)
 
     if (!location) {
       return res.status(404).json({ message: 'Rider not found. Please load your profile first.' })
@@ -75,17 +75,17 @@ export const getLocation = async (req, res, next) => {
  */
 export const getProfile = async (req, res, next) => {
   try {
-    const riderId = req.user.id
+    const userId = req.user.id
 
-    let rider = await riderModel.getById(riderId)
+    let rider = await riderModel.getByUserId(userId)
 
     // If rider profile doesn't exist, return a default profile
     // The rider record will be created when the user registers OR when their first order is assigned
     if (!rider) {
-      console.log(`No rider profile found for user ${riderId}. Returning default profile.`)
+      console.log(`No rider profile found for user ${userId}. Returning default profile.`)
       return res.json({
-        id: riderId,
-        user_id: riderId,
+        id: null,
+        user_id: userId,
         current_lat: 0,
         current_lng: 0,
         is_available: true,

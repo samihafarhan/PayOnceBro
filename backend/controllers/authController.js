@@ -31,6 +31,51 @@ export const register = async (req, res, next) => {
       if (profileError) {
         console.error('Profile upsert error:', profileError.message);
       }
+
+      if (role === 'rider') {
+        const { data: existingRider } = await supabase
+          .from('riders')
+          .select('id')
+          .eq('user_id', data.user.id)
+          .maybeSingle()
+
+        if (!existingRider) {
+          const { error: riderError } = await supabase
+            .from('riders')
+            .insert({
+              user_id: data.user.id,
+              is_available: true,
+              avg_rating: 0,
+              total_deliveries: 0,
+            })
+
+          if (riderError) {
+            console.error('Rider create error:', riderError.message)
+          }
+        }
+      }
+
+      if (role === 'restaurant_owner' || role === 'restaurant') {
+        const { data: existingRestaurant } = await supabase
+          .from('restaurants')
+          .select('id')
+          .eq('owner_id', data.user.id)
+          .maybeSingle()
+
+        if (!existingRestaurant) {
+          const { error: restaurantError } = await supabase
+            .from('restaurants')
+            .insert({
+              owner_id: data.user.id,
+              name: `${full_name}'s Restaurant`,
+              is_active: true,
+            })
+
+          if (restaurantError) {
+            console.error('Restaurant create error:', restaurantError.message)
+          }
+        }
+      }
     }
 
     res.status(201).json({

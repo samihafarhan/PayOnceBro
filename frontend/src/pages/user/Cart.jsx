@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext'
 import CartItem from '../../components/user/CartItem'
 import CartSummary from '../../components/user/CartSummary'
 import ClusterBanner from '../../components/user/ClusterBanner'
+import { placeOrder } from '../../services/orderService'
 
 const Cart = () => {
   const {
@@ -24,12 +25,32 @@ const Cart = () => {
     )
   }
 
-  // Sprint 3: replace this with a real orderService.placeOrder() call
   const handlePlaceOrder = async () => {
     if (!items.length) return
+    if (!userLocation?.lat || !userLocation?.lng) {
+      alert('Please share location before placing the order.')
+      return
+    }
+
     setPlacingOrder(true)
     try {
-      alert('Order placement is coming in Sprint 3! Your cart is ready.')
+      const payload = {
+        items: items.map((i) => ({
+          menuItemId: i.menuItemId,
+          restaurantId: i.restaurantId,
+          quantity: i.quantity,
+        })),
+        restaurantIds: [...new Set(items.map((i) => i.restaurantId))],
+        userLat: userLocation.lat,
+        userLng: userLocation.lng,
+        isCluster: Boolean(clusterStatus?.eligible),
+      }
+
+      const result = await placeOrder(payload)
+      clearCart()
+      alert(`Order placed successfully. Order ID: ${result.orderId}`)
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to place order')
     } finally {
       setPlacingOrder(false)
     }
@@ -99,7 +120,7 @@ const Cart = () => {
           {restaurantGroups.map(({ restaurantId, restaurantName, items: groupItems }) => (
             <div key={restaurantId} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2 bg-gray-50">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white font-black text-sm">
+                <div className="w-8 h-8 rounded-lg bg-linear-to-br from-orange-400 to-rose-500 flex items-center justify-center text-white font-black text-sm">
                   {restaurantName[0]}
                 </div>
                 <span className="font-semibold text-gray-800 text-sm">{restaurantName}</span>

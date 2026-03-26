@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect } from 'react'
 import supabase from '../lib/supabase'
 import useFetch from './useFetch'
 import { getRestaurantOrders } from '../services/restaurantService'

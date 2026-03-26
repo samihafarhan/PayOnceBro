@@ -11,6 +11,8 @@ import searchRoutes from './routes/searchRoutes.js';
 import deliveryRoutes from './routes/deliveryRoutes.js';
 import clusterRoutes from './routes/clusterRoutes.js';
 import riderRoutes from './routes/riderRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import ratingRoutes from './routes/ratingRoutes.js';
 
 const app = express();
 
@@ -36,6 +38,8 @@ app.use('/api/search',      searchRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/cluster',     clusterRoutes);
 app.use('/api/rider',       riderRoutes);
+app.use('/api/orders',      orderRoutes);
+app.use('/api/ratings',     ratingRoutes);
 
 app.use(errorHandler);
 

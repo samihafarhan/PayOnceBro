@@ -7,7 +7,7 @@ import supabase from "../lib/supabase";
 const urlcontext = createContext()
 
 const UrlProvider = ({children}) => {
-    const {data:user, error, loading, fn:fetchuser} = useFetch(getCurrentUser)
+    const {data:user, loading, fn:fetchuser} = useFetch(getCurrentUser)
     const [isSessionLoaded, setIsSessionLoaded] = useState(false)
     const isAuthenticated = Boolean(user && (user.aud === "authenticated" || user.email))
 
@@ -22,7 +22,7 @@ const UrlProvider = ({children}) => {
 
     useEffect(() => {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
+            async (event) => {
                 if (event === 'INITIAL_SESSION') {
                     setIsSessionLoaded(true)
                     // Fetch user once on the initial session event (covers both

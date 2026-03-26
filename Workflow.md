@@ -272,7 +272,7 @@ any → cancelled          (Restaurant or Admin)
 ---
 
 # SPRINT 1 — Foundation
-**Status:** 4 of 5 features DONE. F18 remaining.  
+**Status:** 5 of 5 features DONE.  
 **Double Duty:** Member C (F11 + F12) — already completed.  
 **Shared Goal:** By end of Sprint 1, every member has: the repo cloned, `.env` set up, Supabase connected, their dashboard shell rendering after login, auth working end-to-end, and the delivery fee engine exposed as an API.
 
@@ -616,6 +616,7 @@ RIDER_SPEED_KMH=30
 
 # SPRINT 2 — Core Transactions
 **Duration:** Week 3–4  
+**Status:** 5 of 5 features DONE.  
 **Double Duty:** Member A (F2 + F3)  
 **Shared Goal:** Clustering and cart work end-to-end. Riders can update delivery statuses. Restaurants can be rated. Orders can be placed and aggregated.
 
@@ -680,10 +681,10 @@ export const getNearbyClusteredRestaurants = async (userLat, userLng) => {
 | POST | `/api/cluster/check` | JWT (user) | `{ restaurantIds[], userLat, userLng }` | `{ eligible, estimatedSaving }` |
 
 ### Sprint 2 Acceptance Checklist (Member A — F2)
-- [ ] Two restaurants 1.5km apart → `eligible: true`
-- [ ] Two restaurants 3km apart → `eligible: false`
-- [ ] Single restaurant → `eligible: false` (no cluster needed)
-- [ ] Search results use `sortByProximity` for ordering
+- [x] Two restaurants 1.5km apart → `eligible: true`
+- [x] Two restaurants 3km apart → `eligible: false`
+- [x] Single restaurant → `eligible: false` (no cluster needed)
+- [x] Search results use `sortByProximity` for ordering
 
 ---
 
@@ -726,10 +727,10 @@ frontend/src/services/deliveryService.js     ← getFee
 ```
 
 ### Sprint 2 Acceptance Checklist (Member A — F3)
-- [ ] Adding items from 3 restaurants works
-- [ ] Cluster banner appears/disappears dynamically
-- [ ] Totals update live as items are added/removed
-- [ ] Cart persists across page navigation within session
+- [x] Adding items from 3 restaurants works
+- [x] Cluster banner appears/disappears dynamically
+- [x] Totals update live as items are added/removed
+- [x] Cart persists across page navigation within session
 
 ---
 
@@ -764,10 +765,10 @@ backend/models/riderModel.js                   ← updateLocation, setAvailable
 | GET | `/api/rider/:id/location` | JWT | — | `{ lat, lng }` |
 
 ### Sprint 2 Acceptance Checklist (Member B — F8)
-- [ ] Illegal status transition (e.g., pending → delivered) returns 400
-- [ ] Status buttons show correct next-state options
-- [ ] Rider marked available after delivering
-- [ ] Location updates in DB every 30 seconds
+- [x] Illegal status transition (e.g., pending → delivered) returns 400
+- [x] Status buttons show correct next-state options
+- [x] Rider marked available after delivering
+- [x] Location updates in DB every 30 seconds
 
 ---
 
@@ -800,10 +801,10 @@ frontend/src/components/restaurant/ReviewResponseForm.jsx
 | POST | `/api/ratings/:id/response` | JWT (restaurant) | `{ responseText }` | `{ rating }` |
 
 ### Sprint 2 Acceptance Checklist (Member C — F14)
-- [ ] Average rating updates after each submission
-- [ ] Restaurant response appears threaded under review
-- [ ] User can rate each restaurant in a multi-order separately
-- [ ] Reviews page renders for restaurant owner
+- [x] Average rating updates after each submission
+- [x] Restaurant response appears threaded under review
+- [x] User can rate each restaurant in a multi-order separately
+- [x] Reviews page renders for restaurant owner
 
 ---
 
@@ -854,14 +855,14 @@ backend/models/riderModel.js               ← getAvailable (add to Member B's m
 | PUT | `/api/orders/:id/status` | JWT | `{ status }` | `{ order }` |
 
 ### Sprint 2 Acceptance Checklist (Member D — F19)
-- [ ] Order created with `pending` status
-- [ ] Cluster record created only when `isCluster: true`
-- [ ] Placing order with unavailable item returns 400
-- [ ] Restaurant notified via Supabase on order creation
-- [ ] Nearest available rider assigned on `accepted` transition
-- [ ] Assigned rider's `is_available` set to `false`
-- [ ] Rider dashboard updates live when assigned
-- [ ] No assignment made if no riders available (order stays `accepted`, retry logic logs warning)
+- [x] Order created with `pending` status
+- [x] Cluster record created only when `isCluster: true`
+- [x] Placing order with unavailable item returns 400
+- [x] Restaurant notified via Supabase on order creation
+- [x] Nearest available rider assigned on `accepted` transition
+- [x] Assigned rider's `is_available` set to `false`
+- [x] Rider dashboard updates live when assigned
+- [x] No assignment made if no riders available (order stays `accepted`, retry logic logs warning)
 
 ---
 

@@ -23,6 +23,23 @@ export const getById = async (id) => {
 }
 
 /**
+ * getByUserId — fetch rider row by authenticated user id.
+ */
+export const getByUserId = async (userId) => {
+  const { data, error } = await supabase
+    .from('riders')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  if (error) {
+    console.error('Rider getByUserId error:', error)
+    return null
+  }
+  return data
+}
+
+/**
  * getAvailable — fetch all riders with is_available = true.
  * Used by riderAssignmentService to find candidates for a delivery.
  */
@@ -47,7 +64,6 @@ export const updateLocation = async (riderId, lat, lng) => {
     .update({
       current_lat: lat,
       current_lng: lng,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', riderId)
     .select('id, current_lat, current_lng')
@@ -55,6 +71,27 @@ export const updateLocation = async (riderId, lat, lng) => {
 
   if (error) {
     console.error('Failed to update rider location:', error)
+    return null
+  }
+  return data
+}
+
+/**
+ * updateLocationByUserId — update rider coords using user_id.
+ */
+export const updateLocationByUserId = async (userId, lat, lng) => {
+  const { data, error } = await supabase
+    .from('riders')
+    .update({
+      current_lat: lat,
+      current_lng: lng,
+    })
+    .eq('user_id', userId)
+    .select('id, user_id, current_lat, current_lng')
+    .single()
+
+  if (error) {
+    console.error('Failed to update rider location by user_id:', error)
     return null
   }
   return data
@@ -70,7 +107,6 @@ export const setAvailable = async (riderId, isAvailable) => {
     .from('riders')
     .update({
       is_available: isAvailable,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', riderId)
     .select('id, is_available')
@@ -128,7 +164,6 @@ export const updateStats = async (riderId, totalDeliveries) => {
     .from('riders')
     .update({
       total_deliveries: totalDeliveries,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', riderId)
     .select('total_deliveries')

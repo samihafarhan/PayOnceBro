@@ -244,7 +244,7 @@ const CartBar = ({ cartItems, allRestaurants, userLat, userLng, onClear }) => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-4 pt-2
-                    bg-gradient-to-t from-gray-50 via-gray-50/95 to-transparent
+                    bg-linear-to-t from-gray-50 via-gray-50/95 to-transparent
                     pointer-events-none">
       <div className="max-w-5xl mx-auto pointer-events-auto">
         <div className="rounded-2xl bg-gray-900 text-white shadow-2xl overflow-hidden">
@@ -417,7 +417,7 @@ const NearbyRestaurantsView = ({ userLocation }) => {
           <div className="w-2 h-7 rounded-full bg-emerald-500" />
           <h2 className="font-black text-gray-900 text-lg">🔗 Cluster Delivery</h2>
         </div>
-        <p className="text-xs text-gray-500 ml-[18px] mb-4">
+        <p className="text-xs text-gray-500 ml-4.5 mb-4">
           Restaurants within <strong>2 km</strong> of each other. You can order from
           <em> any one, two, or all</em> — as long as your whole cart stays within the
           same cluster, you get the discounted combined delivery fee.
@@ -432,7 +432,6 @@ const NearbyRestaurantsView = ({ userLocation }) => {
             }
 
           const clusterFeePreview = calcFee(restaurants, lat, lng, true)
-          const indivFeePreview   = calcFee(restaurants, lat, lng, false)
           const color = CLUSTER_COLORS[groupId] ?? '#059669'
 
           return (
@@ -509,7 +508,7 @@ const NearbyRestaurantsView = ({ userLocation }) => {
           <div className="w-2 h-7 rounded-full bg-gray-400" />
           <h2 className="font-black text-gray-900 text-lg">🚚 Standard Delivery</h2>
         </div>
-        <p className="text-xs text-gray-500 ml-[18px] mb-4">
+        <p className="text-xs text-gray-500 ml-4.5 mb-4">
           Too far from the clusters for a combined pickup. Ordering from these —
           or mixing with a cluster — applies individual fees per restaurant.
         </p>

@@ -35,8 +35,18 @@ export const checkCluster = async (req, res, next) => {
     const { restaurantIds, userLat, userLng } = req.body
 
     // Validate input
-    if (!Array.isArray(restaurantIds) || restaurantIds.length < 2) {
-      return res.status(400).json({ message: 'Provide at least 2 restaurantIds to check a cluster' })
+    if (!Array.isArray(restaurantIds) || restaurantIds.length === 0) {
+      return res.status(400).json({ message: 'restaurantIds array is required' })
+    }
+
+    if (restaurantIds.length === 1) {
+      return res.json({
+        eligible: false,
+        reason: 'Single restaurant order does not require clustering',
+        restaurants: [],
+        deliveryFee: null,
+        eta: null,
+      })
     }
 
     // Fetch restaurant records from DB (includes lat/lng once data is added)

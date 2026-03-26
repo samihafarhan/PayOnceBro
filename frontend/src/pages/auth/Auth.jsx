@@ -47,7 +47,7 @@ const Auth = () => {
       <h1 className="text-5xl font-extrabold">
         {searchParams.get("createNew") ? "Please login first" : "Login / Sign Up"}
       </h1>
-      <Tabs defaultValue="Login" className="w-[400px]">
+      <Tabs defaultValue="Login" className="w-100">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="Login">Login</TabsTrigger>
           <TabsTrigger value="Sign Up">Sign Up</TabsTrigger>

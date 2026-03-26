@@ -2,7 +2,6 @@
 // Background location tracking component
 // Mount this once in RiderLayout — it runs silently after mount
 
-import { useEffect, useState } from 'react'
 import useRiderLocation from '../../hooks/useRiderLocation.js'
 
 /**
@@ -20,19 +19,8 @@ import useRiderLocation from '../../hooks/useRiderLocation.js'
  *   <LocationTracker />
  */
 const LocationTracker = () => {
-  const { lat, lng, error, isTracking } = useRiderLocation()
-  const [showError, setShowError] = useState(false)
-
-  useEffect(() => {
-    if (error && error.includes('permission')) {
-      // Only show the error if geolocation was denied
-      setShowError(true)
-
-      // Auto-dismiss after 5 seconds
-      const timer = setTimeout(() => setShowError(false), 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [error])
+  const { error } = useRiderLocation()
+  const showError = Boolean(error && error.toLowerCase().includes('permission'))
 
   // Silent component — only renders error notification if needed
   if (!showError) {

@@ -33,6 +33,13 @@ const EMPTY_PROFILE = {
 const toInputValue = (value) => (value ?? '')
 const toNullableNumber = (value) => (value === '' ? null : Number(value))
 
+const isProfileSetupComplete = (form) => {
+  const hasName = !!form.name?.trim()
+  const hasAddress = !!form.address?.trim()
+  const hasCoords = form.lat !== '' && form.lng !== ''
+  return hasName && hasAddress && hasCoords
+}
+
 const removeNil = (obj) => Object.fromEntries(
   Object.entries(obj).filter(([, v]) => v !== undefined && v !== null)
 )
@@ -76,6 +83,7 @@ const RestaurantDetailsPanel = () => {
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
   const [showMapPicker, setShowMapPicker] = useState(false)
+  const [showSetupModal, setShowSetupModal] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -83,7 +91,7 @@ const RestaurantDetailsPanel = () => {
       setError('')
       try {
         const profile = await getProfile()
-        setForm({
+        const nextForm = {
           name: profile.name ?? '',
           address: profile.address ?? '',
           lat: toInputValue(profile.lat),
@@ -93,7 +101,9 @@ const RestaurantDetailsPanel = () => {
           is_active: profile.is_active ?? true,
           cuisine: profile.cuisine ?? '',
           phone: profile.phone ?? '',
-        })
+        }
+        setForm(nextForm)
+        setShowSetupModal(!isProfileSetupComplete(nextForm))
       } catch (err) {
         setError(err?.response?.data?.message || err?.message || 'Failed to load restaurant details.')
       } finally {
@@ -137,7 +147,7 @@ const RestaurantDetailsPanel = () => {
       })
 
       const profile = await updateProfile(payload)
-      setForm({
+      const nextForm = {
         name: profile.name ?? '',
         address: profile.address ?? '',
         lat: toInputValue(profile.lat),
@@ -147,7 +157,9 @@ const RestaurantDetailsPanel = () => {
         is_active: profile.is_active ?? true,
         cuisine: profile.cuisine ?? '',
         phone: profile.phone ?? '',
-      })
+      }
+      setForm(nextForm)
+      setShowSetupModal(!isProfileSetupComplete(nextForm))
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (err) {
@@ -169,6 +181,107 @@ const RestaurantDetailsPanel = () => {
 
   return (
     <>
+      {showSetupModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center">
+          <div className="w-full max-w-2xl rounded-xl bg-white border border-gray-200 shadow-xl p-5">
+            <h3 className="text-lg font-bold text-gray-900">Set up your restaurant</h3>
+            <p className="text-sm text-gray-600 mt-1 mb-4">
+              Complete these details to activate your restaurant dashboard for first-time login.
+            </p>
+
+            <form onSubmit={handleSave} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Restaurant name</label>
+                  <input
+                    value={form.name}
+                    onChange={updateField('name')}
+                    required
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Cuisine</label>
+                  <input
+                    value={form.cuisine}
+                    onChange={updateField('cuisine')}
+                    placeholder="e.g. Fast Food"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
+                  <div className="flex gap-2">
+                    <input
+                      value={form.address}
+                      onChange={updateField('address')}
+                      required
+                      placeholder="Restaurant address"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowMapPicker(true)}
+                      className="px-3 py-2 rounded-md border border-orange-300 text-orange-700 text-sm font-medium hover:bg-orange-50 transition-colors whitespace-nowrap"
+                    >
+                      Pin location
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Latitude</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    value={form.lat}
+                    onChange={updateField('lat')}
+                    required
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Longitude</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    value={form.lng}
+                    onChange={updateField('lng')}
+                    required
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                  <input
+                    value={form.phone}
+                    onChange={updateField('phone')}
+                    placeholder="e.g. +8801XXXXXXXXX"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  />
+                </div>
+              </div>
+
+              {error && <p className="text-sm text-red-600">{error}</p>}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4 py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 transition-colors"
+                >
+                  {saving ? 'Saving…' : 'Complete setup'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <LocationPickerMap
         isOpen={showMapPicker}
         onClose={() => setShowMapPicker(false)}
