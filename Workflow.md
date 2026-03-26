@@ -622,7 +622,7 @@ RIDER_SPEED_KMH=30
 
 ---
 
-## S2 — Feature 2: AI-Based Restaurant Clustering (Member A)
+## S2 — Feature 2: AI-Based Restaurant Clustering (Member A) ✅ DONE
 
 ### Goal
 The system calculates distance between restaurants using location coordinates, groups them within a fixed radius (1–2 km), and suggests clustered restaurants for combined delivery. If no cluster is available, the system shows a normal ordering option.
@@ -688,7 +688,7 @@ export const getNearbyClusteredRestaurants = async (userLat, userLng) => {
 
 ---
 
-## S2 — Feature 3: Multi-Restaurant Cart (Member A)
+## S2 — Feature 3: Multi-Restaurant Cart (Member A) ✅ DONE
 
 ### Goal
 Users add items from multiple restaurants into one cart. Cluster eligibility and delivery fee shown live.
@@ -734,7 +734,7 @@ frontend/src/services/deliveryService.js     ← getFee
 
 ---
 
-## S2 — Feature 8: Delivery Status Update (Member B)
+## S2 — Feature 8: Delivery Status Update (Member B) ✅ DONE
 
 ### Goal
 Riders can update order status (Pickup → On the Way → Delivered) via button taps on the dashboard. Also implements rider location updating.
@@ -772,7 +772,7 @@ backend/models/riderModel.js                   ← updateLocation, setAvailable
 
 ---
 
-## S2 — Feature 14: Restaurant Rating System (Member C)
+## S2 — Feature 14: Restaurant Rating System (Member C) ✅ DONE
 
 ### Goal
 Customers rate food quality and leave written reviews. The system calculates an overall rating for the restaurant. Restaurants can respond to reviews.
@@ -808,7 +808,7 @@ frontend/src/components/restaurant/ReviewResponseForm.jsx
 
 ---
 
-## S2 — Feature 19: Order Aggregation Engine (Member D)
+## S2 — Feature 19: Order Aggregation Engine (Member D) ✅ DONE
 
 ### Goal
 The core order placement backend. Check if restaurants are within cluster radius, combine orders before rider assignment, assign a single rider to grouped restaurants, and prevent multiple riders for the same user address.
