@@ -1,5 +1,6 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { UrlState } from '../context/AuthContext';
+import LocationTracker from '../components/rider/LocationTracker.jsx';
 
 const RiderLayout = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const RiderLayout = () => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+      <LocationTracker />
       {/* Sidebar */}
       <nav style={{ width: '240px', background: '#1e293b', color: 'white', padding: '20px' }}>
         <h2 style={{ color: '#38bdf8' }}>PayOnce Rider</h2>
