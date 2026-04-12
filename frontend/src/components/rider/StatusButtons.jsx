@@ -2,11 +2,11 @@
 // Displays status transition buttons for the current order
 
 import { useState } from 'react'
+import { useEffect } from 'react'
 import api from '../../services/api.js'
+import { toast } from 'sonner'
 
 const STATUS_TRANSITIONS = {
-  pending: 'accepted',
-  accepted: 'preparing',
   preparing: 'pickup',
   pickup: 'on_the_way',
   on_the_way: 'delivered',
@@ -38,9 +38,11 @@ const StatusButtons = ({ orderId, currentStatus, onStatusUpdate, disabled = fals
         status: nextStatus,
       })
 
+      toast.success(`Order status updated to ${nextStatus.replace('_', ' ')}.`)
+
       // Emit success event with updated order
       if (onStatusUpdate) {
-        onStatusUpdate(data)
+        onStatusUpdate(data?.order ?? data)
       }
     } catch (err) {
       console.error('Status update failed:', err)
@@ -50,11 +52,23 @@ const StatusButtons = ({ orderId, currentStatus, onStatusUpdate, disabled = fals
     }
   }
 
+  useEffect(() => {
+    if (!error) return
+    toast.error(error, { id: `error-${error}` })
+  }, [error])
+
   if (!nextStatus) {
+    const message =
+      currentStatus === 'accepted'
+        ? 'Waiting for restaurant to start preparing'
+        : currentStatus === 'delivered'
+          ? 'Order completed'
+          : 'Order in final state'
+
     return (
       <div className="flex items-center justify-center p-4 bg-gray-50 rounded">
         <span className="text-sm text-gray-600">
-          Order {currentStatus === 'delivered' ? 'completed' : 'in final state'}
+          {message}
         </span>
       </div>
     )
@@ -62,12 +76,6 @@ const StatusButtons = ({ orderId, currentStatus, onStatusUpdate, disabled = fals
 
   return (
     <div className="flex flex-col gap-3">
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
       <div className="flex gap-2">
         <button
           onClick={handleUpdateStatus}

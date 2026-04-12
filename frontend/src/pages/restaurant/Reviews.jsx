@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ReviewList from '../../components/restaurant/ReviewList'
 import { addRestaurantReviewResponse, getRestaurantReviews } from '../../services/restaurantService'
+import { toast } from 'sonner'
 
 const Reviews = () => {
   const [reviews, setReviews] = useState([])
@@ -27,6 +28,11 @@ const Reviews = () => {
     load()
   }, [])
 
+  useEffect(() => {
+    if (!error) return
+    toast.error(error, { id: `error-${error}` })
+  }, [error])
+
   const handleRespond = async (ratingId, responseText) => {
     setRespondingId(ratingId)
     setError('')
@@ -51,12 +57,6 @@ const Reviews = () => {
         <div className="mb-4 bg-white rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700">
           <span className="font-semibold">{restaurant.name}</span>
           <span className="ml-3 text-amber-600 font-semibold">⭐ {Number(restaurant.avg_rating || 0).toFixed(2)}</span>
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          {error}
         </div>
       )}
 

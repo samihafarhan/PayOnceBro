@@ -96,7 +96,11 @@ export const placeOrder = async (req, res, next) => {
       priceAtOrder: menuMap.get(i.menuItemId).price,
     }))
     await orderModel.createItems(order.id, itemPayload)
-    await orderModel.insertStatusHistory(order.id, 'pending', req.user.id)
+    try {
+      await orderModel.insertStatusHistory(order.id, 'pending', req.user.id)
+    } catch (historyErr) {
+      console.warn('Order status history insert failed on placeOrder:', historyErr?.message || historyErr)
+    }
 
     res.status(201).json({
       orderId: order.id,
@@ -200,7 +204,11 @@ export const updateStatus = async (req, res, next) => {
     }
 
     const updated = await orderModel.updateStatus(orderId, status)
-    await orderModel.insertStatusHistory(orderId, status, req.user.id)
+    try {
+      await orderModel.insertStatusHistory(orderId, status, req.user.id)
+    } catch (historyErr) {
+      console.warn('Order status history insert failed on updateStatus:', historyErr?.message || historyErr)
+    }
 
     if ((role === 'restaurant_owner' || role === 'restaurant') && status === 'accepted') {
       await findBestRider(orderId)

@@ -1,4 +1,5 @@
 import * as restaurantModel from '../models/restaurantModel.js'
+import { findBestRider } from '../services/riderAssignmentService.js'
 
 const getDefaultRestaurantName = (email) => {
   const fallback = 'My Restaurant'
@@ -145,7 +146,10 @@ export const updateOrderStatus = async (req, res, next) => {
 
     const updated = await restaurantModel.updateOrderStatus(orderId, status)
 
-    // Sprint 3 handoff (Member D): when status === 'accepted', call findBestRider here
+    // Keep assignment behavior consistent with /orders/:id/status flow.
+    if (status === 'accepted') {
+      await findBestRider(orderId)
+    }
 
     res.json({ order: updated })
   } catch (err) {

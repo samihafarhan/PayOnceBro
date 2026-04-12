@@ -1,6 +1,6 @@
 // frontend/src/context/CartContext.jsx
 import { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react'
-import api from '../services/api'
+import { checkCluster, getDeliveryFee } from '../services/deliveryService'
 
 const INITIAL_CLUSTER = {
   checked: false, eligible: false, reason: null,
@@ -62,20 +62,62 @@ export const CartProvider = ({ children }) => {
 
   const runClusterCheck = useCallback(async (items, location) => {
     const ids = [...new Set(items.map((i) => i.restaurantId))]
-    if (ids.length < 2) { dispatch({ type: 'RESET_CLUSTER' }); return }
+    if (ids.length === 0) {
+      dispatch({ type: 'RESET_CLUSTER' })
+      return
+    }
+
+    const lat = location?.lat
+    const lng = location?.lng
+    const hasLocation = Number.isFinite(lat) && Number.isFinite(lng)
+
     dispatch({ type: 'SET_CHECKING_CLUSTER', payload: true })
     try {
-      const { data } = await api.post('/cluster/check', {
-        restaurantIds: ids,
-        userLat: location?.lat ?? null,
-        userLng: location?.lng ?? null,
-      })
+      let clusterData = {
+        checked: false,
+        eligible: false,
+        reason: null,
+        centroid: null,
+        maxDistanceKm: null,
+        eta: null,
+      }
+
+      if (ids.length >= 2) {
+        const data = await checkCluster({
+          restaurantIds: ids,
+          userLat: hasLocation ? lat : null,
+          userLng: hasLocation ? lng : null,
+        })
+
+        clusterData = {
+          checked: true,
+          eligible: Boolean(data.eligible),
+          reason: data.reason ?? null,
+          centroid: data.centroid ?? null,
+          maxDistanceKm: data.maxDistanceKm ?? null,
+          eta: data.eta ?? null,
+        }
+      }
+
+      const feeData = hasLocation
+        ? await getDeliveryFee({
+            restaurantIds: ids,
+            userLat: lat,
+            userLng: lng,
+            isCluster: ids.length >= 2 ? clusterData.eligible : false,
+          })
+        : null
+
       dispatch({
         type: 'SET_CLUSTER_STATUS',
         payload: {
-          checked: true, eligible: data.eligible, reason: data.reason ?? null,
-          centroid: data.centroid ?? null, maxDistanceKm: data.maxDistanceKm ?? null,
-          deliveryFee: data.deliveryFee ?? null, eta: data.eta ?? null,
+          checked: clusterData.checked,
+          eligible: clusterData.eligible,
+          reason: clusterData.reason,
+          centroid: clusterData.centroid,
+          maxDistanceKm: clusterData.maxDistanceKm,
+          deliveryFee: feeData,
+          eta: clusterData.eta,
         },
       })
     } catch {

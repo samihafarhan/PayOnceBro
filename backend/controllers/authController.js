@@ -1,17 +1,26 @@
 import supabase from '../config/db.js'
 
+const ALLOWED_ROLES = new Set(['user', 'rider', 'restaurant_owner', 'admin'])
+
 export const register = async (req, res, next) => {
   try {
     const { email, password, role, username, full_name } = req.body
+    const normalizedRole = String(role || '').trim().toLowerCase()
 
     if (!email || !password || !role || !username || !full_name) {
       return res.status(400).json({ message: 'All fields are required' })
     }
 
+    if (!ALLOWED_ROLES.has(normalizedRole)) {
+      return res.status(400).json({
+        message: "Invalid role. Allowed roles: 'user', 'rider', 'restaurant_owner', 'admin'.",
+      })
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { role } },
+      options: { data: { role: normalizedRole } },
     })
 
     if (error) {
@@ -25,14 +34,14 @@ export const register = async (req, res, next) => {
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert(
-          { id: data.user.id, username, full_name, role },
+          { id: data.user.id, username, full_name, role: normalizedRole },
           { onConflict: 'id' }
         );
       if (profileError) {
         console.error('Profile upsert error:', profileError.message);
       }
 
-      if (role === 'rider') {
+      if (normalizedRole === 'rider') {
         const { data: existingRider } = await supabase
           .from('riders')
           .select('id')
@@ -55,7 +64,7 @@ export const register = async (req, res, next) => {
         }
       }
 
-      if (role === 'restaurant_owner' || role === 'restaurant') {
+      if (normalizedRole === 'restaurant_owner') {
         const { data: existingRestaurant } = await supabase
           .from('restaurants')
           .select('id')

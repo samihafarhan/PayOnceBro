@@ -3,6 +3,7 @@ import useRestaurantOrders from '../../hooks/useRestaurantOrders'
 import OrderCard from '../../components/restaurant/OrderCard'
 import LocationPickerMap from '../../components/user/LocationPickerMap'
 import { getProfile, updateProfile } from '../../services/restaurantService'
+import { toast } from 'sonner'
 
 const TABS = [
   { key: 'pending',   label: 'New Orders' },
@@ -81,9 +82,13 @@ const RestaurantDetailsPanel = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [saved, setSaved] = useState(false)
   const [showMapPicker, setShowMapPicker] = useState(false)
   const [showSetupModal, setShowSetupModal] = useState(false)
+
+  useEffect(() => {
+    if (!error) return
+    toast.error(error, { id: `error-${error}` })
+  }, [error])
 
   useEffect(() => {
     const load = async () => {
@@ -130,7 +135,6 @@ const RestaurantDetailsPanel = () => {
   const handleSave = async (e) => {
     e.preventDefault()
     setSaving(true)
-    setSaved(false)
     setError('')
 
     try {
@@ -160,8 +164,7 @@ const RestaurantDetailsPanel = () => {
       }
       setForm(nextForm)
       setShowSetupModal(!isProfileSetupComplete(nextForm))
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2500)
+      toast.success('Restaurant details updated.')
     } catch (err) {
       if (!err?.response) {
         setError('Cannot reach backend API. Start backend on http://localhost:5000 and try again.')
@@ -265,8 +268,6 @@ const RestaurantDetailsPanel = () => {
                   />
                 </div>
               </div>
-
-              {error && <p className="text-sm text-red-600">{error}</p>}
 
               <div className="flex items-center gap-3">
                 <button
@@ -411,8 +412,6 @@ const RestaurantDetailsPanel = () => {
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
         <div className="flex items-center gap-3">
           <button
             type="submit"
@@ -421,7 +420,6 @@ const RestaurantDetailsPanel = () => {
           >
             {saving ? 'Saving…' : 'Save restaurant details'}
           </button>
-          {saved && <span className="text-sm text-green-600 font-medium">Saved!</span>}
         </div>
       </form>
     </>
@@ -432,7 +430,7 @@ const RestaurantDetailsPanel = () => {
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('pending')
-  const { data: orders, loading, error, refresh } = useRestaurantOrders()
+  const { data: orders, loading, refresh } = useRestaurantOrders()
 
   const list = orders?.[activeTab] ?? []
 
@@ -489,15 +487,8 @@ const Dashboard = () => {
         })}
       </div>
 
-      {/* Error state */}
-      {error && (
-        <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          Failed to load orders. <button onClick={refresh} className="underline">Retry</button>
-        </div>
-      )}
-
       {/* Order grid */}
-      {!loading && !error && list.length === 0 ? (
+      {!loading && list.length === 0 ? (
         <EmptyState
           message={
             activeTab === 'pending'

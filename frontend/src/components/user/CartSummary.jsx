@@ -57,7 +57,7 @@ const CartSummary = ({ subtotal, clusterStatus, onPlaceOrder, placingOrder }) =>
           <ul className="mt-1.5 space-y-1 pl-2">
             {clusterStatus.deliveryFee.breakdown.map((b) => (
               <li key={b.restaurantId} className="flex justify-between">
-                <span className="truncate max-w-[160px]">{b.name ?? b.restaurantId} ({b.distanceKm} km)</span>
+                <span className="truncate max-w-40">{b.name ?? b.restaurantId} ({b.distanceKm} km)</span>
                 <span>৳{b.fee?.toFixed(0) ?? '—'}</span>
               </li>
             ))}

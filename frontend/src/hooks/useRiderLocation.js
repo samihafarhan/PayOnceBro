@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { updateLocation } from '../services/riderService.js'
+import { toast } from 'sonner'
 
 /**
  * useRiderLocation — Tracks rider's GPS location and syncs to backend every 30s.
@@ -39,15 +40,19 @@ const useRiderLocation = () => {
     switch (err.code) {
       case err.PERMISSION_DENIED:
         setError('Location permission denied. Please enable in settings.')
+        toast.error('Location permission denied. Enable location access in your settings.')
         break
       case err.POSITION_UNAVAILABLE:
         setError('Location data unavailable')
+        toast.error('Location data is unavailable right now.')
         break
       case err.TIMEOUT:
         setError('Location request timed out')
+        toast.error('Location request timed out. Please try again.')
         break
       default:
         setError('Failed to get location')
+        toast.error('Unable to get your location.')
     }
   }, [])
 
@@ -70,6 +75,7 @@ const useRiderLocation = () => {
   useEffect(() => {
     if (!navigator.geolocation) {
       setError('Geolocation not supported by this browser')
+      toast.error('Your browser does not support geolocation.')
       return
     }
 

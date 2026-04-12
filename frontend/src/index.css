@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/figtree";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: hsl(var(--background));
@@ -20,58 +25,67 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  --radius: 0.5rem;
+  --font-heading: var(--font-sans);
+  --font-sans: 'Figtree Variable', sans-serif;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  --background: 32 71% 95%; /* Almond lighter variant */
+  --foreground: 14 36% 15%; /* Dark Redwood */
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
+  --card-foreground: 14 36% 15%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
+  --popover-foreground: 14 36% 15%;
+  --primary: 14 36% 47%; /* Redwood */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 141 12% 67%; /* Cambridge Blue */
+  --secondary-foreground: 0 0% 100%;
+  --muted: 31 35% 85%; /* Light Khaki */
+  --muted-foreground: 14 36% 35%;
+  --accent: 26 62% 67%; /* Fawn */
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
+  --border: 31 35% 75%;
+  --input: 31 35% 75%;
+  --ring: 14 36% 47%;
+  --radius: 0.625rem;
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
+  --background: 14 36% 10%;
+  --foreground: 32 71% 87%; /* Almond */
+  --card: 14 36% 15%;
+  --card-foreground: 32 71% 87%;
+  --popover: 14 36% 15%;
+  --popover-foreground: 32 71% 87%;
+  --primary: 26 62% 67%; /* Fawn on dark */
+  --primary-foreground: 14 36% 10%;
+  --secondary: 141 12% 50%;
+  --secondary-foreground: 14 36% 10%;
+  --muted: 14 36% 25%;
+  --muted-foreground: 32 71% 60%;
+  --accent: 31 35% 45%;
+  --accent-foreground: 32 71% 87%;
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 224.3 76.3% 48%;
+  --destructive-foreground: 32 71% 87%;
+  --border: 14 36% 25%;
+  --input: 14 36% 25%;
+  --ring: 26 62% 67%;
 }
 
-* {
-  border-color: hsl(var(--border));
-}
-
-body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

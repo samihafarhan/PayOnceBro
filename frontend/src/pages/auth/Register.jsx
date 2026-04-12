@@ -15,9 +15,10 @@ import * as Yup from 'yup'
 import useFetch from '../../hooks/useFetch'
 import { signup } from '../../services/authService'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
 
 const Register = () => {
-    const [errors, setErrors] = useState([])
+    const [errors, setErrors] = useState({})
     const [formData, setFormData] = useState({
         full_name: "",
         username: "",
@@ -44,7 +45,7 @@ const Register = () => {
     useEffect(() => {
         if (data && !error) {
             if (data.requiresEmailConfirmation) {
-                // Email confirmation required — stay on the page; the UI renders a notice below
+                toast.success('Account created. Check your email to verify your account.')
                 return
             }
             // Navigate based on selected role
@@ -54,12 +55,13 @@ const Register = () => {
             else if (role === 'rider') destination = '/rider/dashboard'
             else if (role === 'admin') destination = '/admin/analytics'
 
+            toast.success('Account created. You are signed in.')
             navigate(`${destination}${longlink ? `?createNew=${longlink}` : ""}`, { replace: true })
         }
-    }, [data, error])
+    }, [data, error, formData.role, longlink, navigate])
 
     const handleSignup = async () => {
-        setErrors([])
+        setErrors({})
         try {
             const schema = Yup.object().shape({
                 full_name: Yup.string().trim().min(2, "Full name must be at least 2 characters").required("Full name is required"),
@@ -101,93 +103,95 @@ const Register = () => {
                 <CardTitle>Sign Up</CardTitle>
                 <CardDescription>Create a new account to get started</CardDescription>
                 {error && <Error message={error.message} />}
-                {data?.requiresEmailConfirmation && (
-                    <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2 mt-1">
-                        Account created! Check your email and confirm before logging in.
-                    </p>
-                )}
             </CardHeader>
-            <CardContent className="space-y-2">
-                <div className="space-y-1">
-                    <Input
-                        name="full_name"
-                        type="text"
-                        placeholder="Full Name"
-                        onChange={handleInputChange}
-                        value={formData.full_name}
-                    />
-                    {errors.full_name && <Error message={errors.full_name} />}
-                </div>
-                <div className="space-y-1">
-                    <Input
-                        name="username"
-                        type="text"
-                        placeholder="Username"
-                        onChange={handleInputChange}
-                        value={formData.username}
-                    />
-                    {errors.username && <Error message={errors.username} />}
-                </div>
-                <div className="space-y-1">
-                    <Input
-                        name="email"
-                        type="email"
-                        placeholder="Enter Email"
-                        onChange={handleInputChange}
-                        value={formData.email}
-                    />
-                    {errors.email && <Error message={errors.email} />}
-                </div>
-                <div className="space-y-1">
-                    <Input
-                        name="password"
-                        type="password"
-                        placeholder="Enter Password"
-                        onChange={handleInputChange}
-                        value={formData.password}
-                    />
-                    {errors.password && <Error message={errors.password} />}
-                </div>
-                <div className="space-y-1">
-                    <Input
-                        name="confirmPassword"
-                        type="password"
-                        placeholder="Confirm Password"
-                        onChange={handleInputChange}
-                        value={formData.confirmPassword}
-                    />
-                    {errors.confirmPassword && <Error message={errors.confirmPassword} />}
-                </div>
-                <div className="space-y-1">
-                    <p className="text-sm font-medium">I am a...</p>
-                    <div className="flex gap-2">
-                        {[
-                            { value: 'user', label: 'Customer' },
-                            { value: 'rider', label: 'Rider' },
-                            { value: 'restaurant_owner', label: 'Restaurant Owner' },
-                        ].map(({ value, label }) => (
-                            <button
-                                key={value}
-                                type="button"
-                                onClick={() => setFormData(p => ({ ...p, role: value }))}
-                                className={`flex-1 rounded-md border px-2 py-1.5 text-sm font-medium transition-colors
-                                    ${formData.role === value
-                                        ? 'bg-primary text-primary-foreground border-primary'
-                                        : 'bg-background text-foreground border-input hover:bg-accent'
-                                    }`}
-                            >
-                                {label}
-                            </button>
-                        ))}
+            <form
+                onSubmit={async (e) => {
+                    e.preventDefault()
+                    await handleSignup()
+                }}
+            >
+                <CardContent className="space-y-2">
+                    <div className="space-y-1">
+                        <Input
+                            name="full_name"
+                            type="text"
+                            placeholder="Full Name"
+                            onChange={handleInputChange}
+                            value={formData.full_name}
+                        />
+                        {errors.full_name && <Error message={errors.full_name} />}
                     </div>
-                    {errors.role && <Error message={errors.role} />}
-                </div>
-            </CardContent>
-            <CardFooter>
-                <Button onClick={handleSignup}>
-                    {loading ? <BeatLoader size={10} color="white" /> : "Sign Up"}
-                </Button>
-            </CardFooter>
+                    <div className="space-y-1">
+                        <Input
+                            name="username"
+                            type="text"
+                            placeholder="Username"
+                            onChange={handleInputChange}
+                            value={formData.username}
+                        />
+                        {errors.username && <Error message={errors.username} />}
+                    </div>
+                    <div className="space-y-1">
+                        <Input
+                            name="email"
+                            type="email"
+                            placeholder="Enter Email"
+                            onChange={handleInputChange}
+                            value={formData.email}
+                        />
+                        {errors.email && <Error message={errors.email} />}
+                    </div>
+                    <div className="space-y-1">
+                        <Input
+                            name="password"
+                            type="password"
+                            placeholder="Enter Password"
+                            onChange={handleInputChange}
+                            value={formData.password}
+                        />
+                        {errors.password && <Error message={errors.password} />}
+                    </div>
+                    <div className="space-y-1">
+                        <Input
+                            name="confirmPassword"
+                            type="password"
+                            placeholder="Confirm Password"
+                            onChange={handleInputChange}
+                            value={formData.confirmPassword}
+                        />
+                        {errors.confirmPassword && <Error message={errors.confirmPassword} />}
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-sm font-medium">I am a...</p>
+                        <div className="flex gap-2">
+                            {[
+                                { value: 'user', label: 'Customer' },
+                                { value: 'rider', label: 'Rider' },
+                                { value: 'restaurant_owner', label: 'Restaurant Owner' },
+                            ].map(({ value, label }) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    onClick={() => setFormData(p => ({ ...p, role: value }))}
+                                    className={`flex-1 rounded-md border px-2 py-1.5 text-sm font-medium transition-colors
+                                        ${formData.role === value
+                                            ? 'bg-primary text-primary-foreground border-primary'
+                                            : 'bg-background text-foreground border-input hover:bg-accent'
+                                        }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                        {errors.role && <Error message={errors.role} />}
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button type="submit">
+                        {loading ? <BeatLoader size={10} color="white" /> : "Sign Up"}
+                    </Button>
+                </CardFooter>
+            </form>
         </Card>
     )
 }

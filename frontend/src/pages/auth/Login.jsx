@@ -16,6 +16,7 @@ import useFetch from '../../hooks/useFetch'
 import { login } from '../../services/authService'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { UrlState } from '../../context/AuthContext'
+import { toast } from 'sonner'
 
 const Login = () => {
     const [errors, setErrors] = useState({})
@@ -33,6 +34,7 @@ const Login = () => {
 
     useEffect(() => {
         if (data && !error) {
+            toast.success('Signed in. Welcome back.')
             // Kick off a context refresh so ProtectedRoute sees the latest role
             fetchuser()
             // Navigate immediately based on role from the login API response
@@ -47,7 +49,7 @@ const Login = () => {
                 navigate(`${longlink ? `?createNew=${longlink}` : "/home"}`)
             }
         }
-    }, [data, error])
+    }, [data, error, fetchuser, navigate, longlink])
 
     const handleInputChange = (e) => {
         const { name, value } = e.target
@@ -83,19 +85,26 @@ const Login = () => {
                 <CardDescription>Login to your account if available</CardDescription>
                 {error && <Error message={error.message} />}
             </CardHeader>
-            <CardContent className="space-y-2">
-                <div className="space-y-1">
-                    <Input name="email" type="email" placeholder="Enter Email" onChange={handleInputChange} value={formdata.email} />
-                    {errors.email && <Error message={errors.email} />}
-                </div>
-                <div className="space-y-1">
-                    <Input name="password" type="password" placeholder="Enter Password" onChange={handleInputChange} value={formdata.password} />
-                    {errors.password && <Error message={errors.password} />}
-                </div>
-            </CardContent>
-            <CardFooter>
-                <Button onClick={handleLogin}>{loading ? <BeatLoader size={10} color="white" /> : "Login"}</Button>
-            </CardFooter>
+            <form
+                onSubmit={async (e) => {
+                    e.preventDefault()
+                    await handleLogin()
+                }}
+            >
+                <CardContent className="space-y-2">
+                    <div className="space-y-1">
+                        <Input name="email" type="email" placeholder="Enter Email" onChange={handleInputChange} value={formdata.email} />
+                        {errors.email && <Error message={errors.email} />}
+                    </div>
+                    <div className="space-y-1">
+                        <Input name="password" type="password" placeholder="Enter Password" onChange={handleInputChange} value={formdata.password} />
+                        {errors.password && <Error message={errors.password} />}
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button type="submit">{loading ? <BeatLoader size={10} color="white" /> : "Login"}</Button>
+                </CardFooter>
+            </form>
         </Card>
     )
 }

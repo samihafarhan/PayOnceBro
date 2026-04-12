@@ -19,22 +19,8 @@ import useRiderLocation from '../../hooks/useRiderLocation.js'
  *   <LocationTracker />
  */
 const LocationTracker = () => {
-  const { error } = useRiderLocation()
-  const showError = Boolean(error && error.toLowerCase().includes('permission'))
-
-  // Silent component — only renders error notification if needed
-  if (!showError) {
-    return null
-  }
-
-  return (
-    <div className="fixed bottom-4 left-4 max-w-xs p-4 bg-yellow-50 border border-yellow-200 rounded shadow-sm">
-      <p className="text-sm text-yellow-700">
-        <span className="font-semibold">Location Disabled:</span> Please enable location
-        access in your device settings to share your position with customers.
-      </p>
-    </div>
-  )
+  useRiderLocation()
+  return null
 }
 
 export default LocationTracker

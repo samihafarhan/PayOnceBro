@@ -24,7 +24,15 @@ const ProtectedRoute = ({ role }) => {
   const userRole = user?.role?.trim().toLowerCase();
   const requiredRole = role?.trim().toLowerCase();
 
-  if (requiredRole && userRole !== requiredRole) {
+  const isRoleAllowed = () => {
+    if (!requiredRole) return true;
+    if (userRole === requiredRole) return true;
+    if (requiredRole === 'restaurant_owner' && userRole === 'restaurant') return true;
+    if (requiredRole === 'restaurant' && userRole === 'restaurant_owner') return true;
+    return false;
+  };
+
+  if (!isRoleAllowed()) {
     console.warn('ProtectedRoute: Expected role:', requiredRole, 'but got:', userRole);
     return <Navigate to="/auth" replace />;
   }

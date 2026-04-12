@@ -2,6 +2,7 @@
 // Request handlers — validate input, call services/models, send responses
 
 import * as riderModel from '../models/riderModel.js'
+import * as orderModel from '../models/orderModel.js'
 
 /**
  * updateLocation — rider sends their current GPS coordinates every 30 seconds.
@@ -95,6 +96,109 @@ export const getProfile = async (req, res, next) => {
     }
 
     res.json(rider)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * getAssignments — fetch active assignments for logged-in rider.
+ *
+ * Request:  GET /api/rider/assignments
+ * Auth:     JWT (rider)
+ */
+export const getAssignments = async (req, res, next) => {
+  try {
+    const rider = await riderModel.getByUserId(req.user.id)
+    if (!rider) return res.json({ assignments: [] })
+
+    const activeStatuses = ['accepted', 'preparing', 'pickup', 'on_the_way']
+    const orders = await orderModel.getByRider(rider.id, activeStatuses)
+    if (orders.length === 0) return res.json({ assignments: [] })
+
+    const orderIds = orders.map((o) => o.id)
+    const items = await orderModel.getItemsForOrders(orderIds)
+
+    const itemsByOrder = items.reduce((acc, item) => {
+      if (!acc[item.order_id]) acc[item.order_id] = []
+      acc[item.order_id].push(item)
+      return acc
+    }, {})
+
+    const assignments = orders.map((order) => {
+      const orderItems = itemsByOrder[order.id] ?? []
+      const restaurantsById = {}
+      orderItems.forEach((item) => {
+        if (item.restaurant_id && item.restaurants && !restaurantsById[item.restaurant_id]) {
+          restaurantsById[item.restaurant_id] = item.restaurants
+        }
+      })
+
+      return {
+        ...order,
+        restaurants: Object.values(restaurantsById),
+        itemCount: orderItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
+      }
+    })
+
+    res.json({ assignments })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * getEarnings — summary stats for rider dashboard card.
+ *
+ * Request:  GET /api/rider/earnings
+ * Auth:     JWT (rider)
+ */
+export const getEarnings = async (req, res, next) => {
+  try {
+    const rider = await riderModel.getByUserId(req.user.id)
+    if (!rider) {
+      return res.json({
+        totalEarnings: 0,
+        totalDeliveries: 0,
+        todayEarnings: 0,
+        todayDeliveries: 0,
+      })
+    }
+
+    const deliveredOrders = await orderModel.getByRider(rider.id, ['delivered'])
+    const now = new Date()
+    const todayY = now.getFullYear()
+    const todayM = now.getMonth()
+    const todayD = now.getDate()
+
+    const totals = deliveredOrders.reduce(
+      (acc, order) => {
+        const deliveryFee = Number(order.delivery_fee) || 0
+        acc.totalEarnings += deliveryFee
+        acc.totalDeliveries += 1
+
+        const deliveredAt = order.delivered_at ? new Date(order.delivered_at) : null
+        if (
+          deliveredAt &&
+          deliveredAt.getFullYear() === todayY &&
+          deliveredAt.getMonth() === todayM &&
+          deliveredAt.getDate() === todayD
+        ) {
+          acc.todayEarnings += deliveryFee
+          acc.todayDeliveries += 1
+        }
+
+        return acc
+      },
+      { totalEarnings: 0, totalDeliveries: 0, todayEarnings: 0, todayDeliveries: 0 }
+    )
+
+    res.json({
+      totalEarnings: Number(totals.totalEarnings.toFixed(2)),
+      totalDeliveries: totals.totalDeliveries,
+      todayEarnings: Number(totals.todayEarnings.toFixed(2)),
+      todayDeliveries: totals.todayDeliveries,
+    })
   } catch (error) {
     next(error)
   }

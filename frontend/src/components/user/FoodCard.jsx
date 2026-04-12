@@ -1,13 +1,24 @@
-/**
- * FoodCard.jsx
- *
- * Think of this like a recipe card at a restaurant menu!
- * It shows ONE food item: its name, price, restaurant, and tags.
- *
- * Props:
- *   item           - { menuItem, restaurant, distanceKm, isClusterEligible }
- *   onAddToCart    - function called when user clicks "Add to Cart"
- */
+import React from 'react';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Separator } from '../ui/separator';
+
+const TAG_EMOJI = {
+  vegan: '🥬',
+  spicy: '🌶️',
+  vegetarian: '🥕',
+  healthy: '🥗',
+  popular: '⭐',
+}
+
+const categoryGradient = (cat) => {
+  const map = {
+    'Pizza': 'linear-gradient(to right, #f87171, #fca5a5)',
+    'Burger': 'linear-gradient(to right, #fbbf24, #fcd34d)',
+  }
+  return map[cat] || 'linear-gradient(to right, #cbd5e1, #e2e8f0)'
+}
+
 const FoodCard = ({ item, onAddToCart }) => {
   const { menuItem, restaurant, distanceKm, isClusterEligible } = item
 
@@ -16,117 +27,91 @@ const FoodCard = ({ item, onAddToCart }) => {
     km === null ? null : km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`
 
   return (
-    <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col">
-      {/* Colourful top accent — colour changes by category */}
+    <div className="group bg-card rounded-2xl border shadow-sm hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden">
+      {/* Colourful top accent */}
       <div
         className="h-1.5 w-full"
         style={{ background: categoryGradient(menuItem.category) }}
       />
 
-      <div className="p-4 flex flex-col gap-3 flex-1">
+      <div className="p-4 flex flex-col gap-3 flex-1 h-full isolate">
         {/* Food name + cluster badge */}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-bold text-gray-900 text-base leading-tight group-hover:text-orange-600 transition-colors">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="font-bold text-card-foreground text-base leading-tight group-hover:text-primary transition-colors line-clamp-2">
             {menuItem.name}
           </h3>
           {isClusterEligible && (
-            <span className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+            <Badge variant="secondary" className="shrink-0 font-semibold bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
               🔗 Save more!
-            </span>
+            </Badge>
           )}
         </div>
 
         {/* Description */}
         {menuItem.description && (
-          <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
+          <p className="text-xs text-muted-foreground line-clamp-2">
             {menuItem.description}
           </p>
         )}
 
-        {/* AI Tags (dietary info like vegan, spicy, etc.) */}
+        {/* AI Tags */}
         {menuItem.aiTags && menuItem.aiTags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {menuItem.aiTags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600"
-              >
-                {TAG_EMOJI[tag] ?? '🏷️'} {tag}
-              </span>
+              <Badge key={tag} variant="outline" className="text-[10px] font-normal px-1.5 py-0">
+                {TAG_EMOJI[tag.toLowerCase()] ?? '🏷️'} {tag}
+              </Badge>
             ))}
           </div>
         )}
 
-        {/* Spacer pushes footer to bottom */}
         <div className="flex-1" />
+        <Separator className="my-1" />
 
-        {/* Restaurant info */}
-        <div className="flex items-center gap-1.5 text-xs text-gray-400">
-          <span className="text-sm">🍽️</span>
-          <span className="truncate">{restaurant.name}</span>
-          {restaurant.avgRating > 0 && (
-            <span className="ml-auto flex items-center gap-0.5 text-amber-500 font-medium shrink-0">
-              ⭐ {Number(restaurant.avgRating).toFixed(1)}
-            </span>
+        {/* Restaurant info / Distance */}
+        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 truncate">
+               <span className="text-sm">🍽️</span>
+               <span className="truncate">{restaurant.name}</span>
+            </div>
+            {restaurant.avgRating > 0 && (
+              <span className="flex items-center gap-0.5 text-amber-500 font-medium shrink-0 ml-2">
+                ⭐ {Number(restaurant.avgRating).toFixed(1)}
+              </span>
+            )}
+          </div>
+          
+          {distanceKm !== null && (
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                📍 {formatDistance(distanceKm)} away
+              </span>
+              {restaurant.avgPrepTime && (
+                <span className="flex items-center gap-1">
+                  ⏱️ ~{restaurant.avgPrepTime}m
+                </span>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Distance */}
-        {distanceKm !== null && (
-          <p className="text-xs text-gray-400 flex items-center gap-1">
-            <span>📍</span>
-            <span>{formatDistance(distanceKm)} away</span>
-            {restaurant.avgPrepTime && (
-              <>
-                <span className="mx-1 text-gray-300">·</span>
-                <span>⏱ ~{restaurant.avgPrepTime} min prep</span>
-              </>
-            )}
-          </p>
-        )}
-
-        {/* Price + Add to Cart */}
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-          <span className="text-lg font-black text-gray-900">
+        {/* Price & Action */}
+        <div className="flex items-center justify-between pt-3">
+          <span className="text-lg font-black text-foreground tracking-tight">
             {formatPrice(menuItem.price)}
           </span>
-          <button
-            onClick={() => onAddToCart && onAddToCart(item)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500 text-white text-sm font-semibold hover:bg-orange-600 active:scale-95 transition-all duration-150 shadow-sm shadow-orange-200"
+          <Button 
+            size="sm" 
+            onClick={() => onAddToCart(item)}
+            className="rounded-xl px-4 font-semibold shadow-sm hover:scale-105 transition-transform"
           >
-            <span>+</span> Add
-          </button>
+            Add to Cart
+          </Button>
         </div>
       </div>
     </div>
   )
-}
-
-// Gives each food category a unique colourful gradient for the top bar
-const categoryGradient = (category = '') => {
-  const c = category.toLowerCase()
-  if (c.includes('burger') || c.includes('fast')) return 'linear-gradient(90deg, #f97316, #fb923c)'
-  if (c.includes('pizza')) return 'linear-gradient(90deg, #ef4444, #f87171)'
-  if (c.includes('chinese') || c.includes('asian')) return 'linear-gradient(90deg, #eab308, #fbbf24)'
-  if (c.includes('italian') || c.includes('pasta')) return 'linear-gradient(90deg, #22c55e, #4ade80)'
-  if (c.includes('indian') || c.includes('curry')) return 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-  if (c.includes('veg') || c.includes('salad')) return 'linear-gradient(90deg, #16a34a, #22c55e)'
-  if (c.includes('dessert') || c.includes('sweet')) return 'linear-gradient(90deg, #ec4899, #f472b6)'
-  return 'linear-gradient(90deg, #6366f1, #818cf8)'
-}
-
-// Fun emoji for each AI tag
-const TAG_EMOJI = {
-  vegan: '🌱',
-  vegetarian: '🥗',
-  halal: '☪️',
-  spicy: '🌶️',
-  mild: '😊',
-  sweet: '🍬',
-  'gluten-free': '🌾',
-  'dairy-free': '🥛',
-  'high-protein': '💪',
-  'low-calorie': '⚖️',
 }
 
 export default FoodCard

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import supabase from '../../lib/supabase'
+import { toast } from 'sonner'
 import {
   getMenu,
   addMenuItem,
@@ -31,6 +32,11 @@ const ItemForm = ({ initial = EMPTY_FORM, onSave, onCancel, saving }) => {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
   const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    if (!uploadError) return
+    toast.error(uploadError, { id: `error-${uploadError}` })
+  }, [uploadError])
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
@@ -180,10 +186,7 @@ const ItemForm = ({ initial = EMPTY_FORM, onSave, onCancel, saving }) => {
                   Remove
                 </button>
               )}
-              <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP — max 5 MB</p>
-              {uploadError && (
-                <p className="text-xs text-red-500 mt-1">{uploadError}</p>
-              )}
+                <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP — max 5 MB</p>
             </div>
           </div>
         </div>
@@ -215,8 +218,12 @@ const SettingsPanel = ({ initial, onSave }) => {
   const [prepTime, setPrepTime] = useState(initial.avg_prep_time ?? '')
   const [capacity, setCapacity] = useState(initial.max_orders_per_hour ?? '')
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [err, setErr] = useState(null)
+
+  useEffect(() => {
+    if (!err) return
+    toast.error(err, { id: `error-${err}` })
+  }, [err])
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -228,8 +235,7 @@ const SettingsPanel = ({ initial, onSave }) => {
       if (prepTime !== '') payload.avg_prep_time = Number(prepTime)
       if (capacity !== '') payload.max_orders_per_hour = Number(capacity)
       await onSave(payload)
-      setSaved(true)
-      setTimeout(() => setSaved(false), 2500)
+      toast.success('Restaurant settings updated.')
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -281,8 +287,6 @@ const SettingsPanel = ({ initial, onSave }) => {
         </div>
       </div>
 
-      {err && <p className="mt-2 text-xs text-red-600">{err}</p>}
-
       <div className="mt-4 flex items-center gap-3">
         <button
           type="submit"
@@ -291,7 +295,6 @@ const SettingsPanel = ({ initial, onSave }) => {
         >
           {saving ? 'Saving…' : 'Save settings'}
         </button>
-        {saved && <span className="text-xs text-green-600 font-medium">Saved!</span>}
       </div>
     </form>
   )
@@ -396,6 +399,16 @@ const MenuManagement = () => {
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState(null)
+
+  useEffect(() => {
+    if (!error) return
+    toast.error(error, { id: `error-${error}` })
+  }, [error])
+
+  useEffect(() => {
+    if (!formError) return
+    toast.error(formError, { id: `error-${formError}` })
+  }, [formError])
 
   const fetchMenu = useCallback(async () => {
     setLoading(true)
@@ -527,24 +540,11 @@ const MenuManagement = () => {
       {showAddForm && (
         <div className="bg-white rounded-xl border border-orange-200 shadow-sm p-5 mb-6">
           <h3 className="text-base font-semibold text-gray-800 mb-4">New menu item</h3>
-          {formError && (
-            <p className="mb-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
-              {formError}
-            </p>
-          )}
           <ItemForm
             onSave={handleAdd}
             onCancel={() => { setShowAddForm(false); setFormError(null) }}
             saving={saving}
           />
-        </div>
-      )}
-
-      {/* Error loading */}
-      {error && (
-        <div className="mb-4 rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
-          {error}
-          <button onClick={fetchMenu} className="underline ml-2">Retry</button>
         </div>
       )}
 
@@ -558,7 +558,7 @@ const MenuManagement = () => {
       )}
 
       {/* Empty state */}
-      {!loading && !error && items.length === 0 && (
+      {!loading && items.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-gray-400">
           <span className="text-4xl mb-3">🍽️</span>
           <p className="text-sm">No menu items yet. Add your first item above.</p>
@@ -581,11 +581,6 @@ const MenuManagement = () => {
                       className="bg-white rounded-xl border border-orange-200 shadow-sm p-4"
                     >
                       <h3 className="text-sm font-semibold text-gray-700 mb-3">Edit "{item.name}"</h3>
-                      {formError && (
-                        <p className="mb-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
-                          {formError}
-                        </p>
-                      )}
                       <ItemForm
                         initial={{
                           name: item.name,

@@ -63,6 +63,35 @@ export const getByUser = async (userId) => {
   return data ?? []
 }
 
+export const getByRider = async (riderId, statuses = null) => {
+  let query = supabase
+    .from('orders')
+    .select('id, rider_id, user_id, cluster_id, status, total_price, delivery_fee, estimated_time, user_lat, user_lng, created_at, delivered_at')
+    .eq('rider_id', riderId)
+    .order('created_at', { ascending: false })
+
+  if (Array.isArray(statuses) && statuses.length > 0) {
+    query = query.in('status', statuses)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+  return data ?? []
+}
+
+export const getItemsForOrders = async (orderIds = []) => {
+  if (!Array.isArray(orderIds) || orderIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('order_items')
+    .select('order_id, menu_item_id, quantity, price_at_order, restaurant_id, restaurants(id, name, address, lat, lng)')
+    .in('order_id', orderIds)
+
+  if (error) throw error
+  return data ?? []
+}
+
 export const getWithItems = async (orderId) => {
   const { data: order, error: orderError } = await supabase
     .from('orders')

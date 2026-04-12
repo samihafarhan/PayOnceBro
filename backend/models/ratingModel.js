@@ -67,24 +67,27 @@ export const listRestaurantReviews = async (restaurantId) => {
   const rows = data ?? []
   const userIds = [...new Set(rows.map((r) => r.rated_by).filter(Boolean))]
 
-  let usersById = {}
+  let profilesById = {}
   if (userIds.length > 0) {
-    const { data: users, error: userErr } = await supabase
-      .from('users')
-      .select('id, name, email')
+    const { data: profiles, error: profileErr } = await supabase
+      .from('profiles')
+      .select('id, full_name, username')
       .in('id', userIds)
 
-    if (userErr) throw userErr
+    if (profileErr) throw profileErr
 
-    usersById = (users ?? []).reduce((acc, u) => {
-      acc[u.id] = u
+    profilesById = (profiles ?? []).reduce((acc, profile) => {
+      acc[profile.id] = profile
       return acc
     }, {})
   }
 
   return rows.map((row) => ({
     ...row,
-    reviewer_name: usersById[row.rated_by]?.name || usersById[row.rated_by]?.email || 'Customer',
+    reviewer_name:
+      profilesById[row.rated_by]?.full_name ||
+      profilesById[row.rated_by]?.username ||
+      'Customer',
   }))
 }
 

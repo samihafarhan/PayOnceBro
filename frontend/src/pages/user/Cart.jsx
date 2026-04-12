@@ -1,11 +1,12 @@
 // frontend/src/pages/user/Cart.jsx
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
 import CartItem from '../../components/user/CartItem'
 import CartSummary from '../../components/user/CartSummary'
 import ClusterBanner from '../../components/user/ClusterBanner'
 import { placeOrder } from '../../services/orderService'
+import { toast } from 'sonner'
 
 const Cart = () => {
   const {
@@ -16,6 +17,11 @@ const Cart = () => {
   const [placingOrder, setPlacingOrder]   = useState(false)
   const [locationStatus, setLocationStatus] = useState(userLocation ? 'granted' : 'idle')
 
+  useEffect(() => {
+    if (locationStatus !== 'denied') return
+    toast.error('Location access denied. Delivery and cluster checks are unavailable.')
+  }, [locationStatus])
+
   const requestLocation = () => {
     if (!navigator.geolocation) { setLocationStatus('denied'); return }
     setLocationStatus('loading')
@@ -25,10 +31,15 @@ const Cart = () => {
     )
   }
 
+  const handleClearCart = () => {
+    clearCart()
+    toast.success('Cart cleared.')
+  }
+
   const handlePlaceOrder = async () => {
     if (!items.length) return
     if (!userLocation?.lat || !userLocation?.lng) {
-      alert('Please share location before placing the order.')
+      toast.error('Location is required before placing an order.')
       return
     }
 
@@ -48,9 +59,9 @@ const Cart = () => {
 
       const result = await placeOrder(payload)
       clearCart()
-      alert(`Order placed successfully. Order ID: ${result.orderId}`)
+      toast.success(`Order placed. ID: ${result.orderId}`)
     } catch (err) {
-      alert(err?.response?.data?.message || 'Failed to place order')
+      toast.error(err?.response?.data?.message || "Couldn't place your order. Please try again.")
     } finally {
       setPlacingOrder(false)
     }
@@ -83,7 +94,7 @@ const Cart = () => {
               {itemCount} item{itemCount !== 1 ? 's' : ''} from {restaurantGroups.length} restaurant{restaurantGroups.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <button onClick={clearCart} className="text-xs text-red-400 hover:text-red-600 font-medium transition-colors">
+          <button onClick={handleClearCart} className="text-xs text-red-400 hover:text-red-600 font-medium transition-colors">
             Clear cart
           </button>
         </div>
@@ -104,10 +115,6 @@ const Cart = () => {
             </button>
           </div>
         )}
-        {locationStatus === 'denied' && (
-          <p className="mb-4 text-xs text-red-500">❌ Location denied — delivery fee and cluster check unavailable.</p>
-        )}
-
         {/* Cluster banner (only shown when 2+ restaurants in cart) */}
         {restaurantGroups.length > 1 && (
           <div className="mb-5">

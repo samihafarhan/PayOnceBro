@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 
 /**
  * SearchBar.jsx
@@ -26,6 +27,11 @@ const SearchBar = ({ onSearch, categories = [], loading = false }) => {
   const [showFilters, setShowFilters] = useState(false)
   const debounceRef = useRef(null)
 
+  useEffect(() => {
+    if (locationStatus !== 'denied') return
+    toast.error('Location access denied. Showing price-sorted results.')
+  }, [locationStatus])
+
   // Every time ANY filter changes, we wait 400ms then call onSearch.
   // "Debouncing" = waiting a little bit so we don't search on every single
   // keystroke. Like waiting for someone to finish talking before responding!
@@ -42,7 +48,7 @@ const SearchBar = ({ onSearch, categories = [], loading = false }) => {
     }, 400)
 
     return () => clearTimeout(debounceRef.current)
-  }, [query, minPrice, maxPrice, cuisine, location])
+  }, [query, minPrice, maxPrice, cuisine, location, onSearch])
 
   // Ask the browser for the user's GPS location
   const requestLocation = () => {
@@ -198,11 +204,6 @@ const SearchBar = ({ onSearch, categories = [], loading = false }) => {
       {locationStatus === 'granted' && (
         <p className="text-xs text-emerald-600 flex items-center gap-1">
           <span>✅</span> Location active — nearby restaurants shown first and cluster savings highlighted
-        </p>
-      )}
-      {locationStatus === 'denied' && (
-        <p className="text-xs text-red-500 flex items-center gap-1">
-          <span>❌</span> Location access denied — results sorted by price instead
         </p>
       )}
     </div>

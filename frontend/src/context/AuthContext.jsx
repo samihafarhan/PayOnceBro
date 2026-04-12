@@ -37,7 +37,7 @@ const UrlProvider = ({children}) => {
         )
         // Do NOT call fetchuser() here — INITIAL_SESSION always fires and handles it
         return () => subscription.unsubscribe()
-    }, [])
+    }, [fetchuser])
 
     return (
         <urlcontext.Provider value={{user, fetchuser, loading, isAuthenticated, isSessionLoaded, logout}}>

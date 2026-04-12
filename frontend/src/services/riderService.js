@@ -29,3 +29,13 @@ export const getProfile = async () => {
   const { data } = await api.get('/rider/profile/me')
   return data
 }
+
+export const getAssignments = async () => {
+  const { data } = await api.get('/rider/assignments')
+  return data.assignments ?? []
+}
+
+export const getEarnings = async () => {
+  const { data } = await api.get('/rider/earnings')
+  return data
+}

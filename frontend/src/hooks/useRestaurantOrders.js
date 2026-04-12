@@ -16,7 +16,7 @@ const useRestaurantOrders = () => {
   // Initial load
   useEffect(() => {
     fetchOrders()
-  }, [])
+  }, [fetchOrders])
 
   // Real-time subscription — fires on any order INSERT or UPDATE
   useEffect(() => {
@@ -34,7 +34,7 @@ const useRestaurantOrders = () => {
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [])
+  }, [fetchOrders])
 
   return { data, loading, error, refresh: fetchOrders }
 }
