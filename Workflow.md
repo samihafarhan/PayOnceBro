@@ -1041,6 +1041,8 @@ frontend/src/components/restaurant/AiTagBadge.jsx
 
 ## S3 — Feature 20: Analytics Dashboard (Member D)
 
+✅ DONE
+
 ### Goal
 Admin can see real platform data: total orders, clustered orders, cluster success rate, average delivery time, rider efficiency, daily sales, most ordered item, and weekly revenue graphs.
 
@@ -1048,9 +1050,11 @@ Admin can see real platform data: total orders, clustered orders, cluster succes
 1. `GET /api/admin/analytics` → `adminController.getAnalytics` → `analyticsService.getAnalytics()`.
 2. Queries:
    - Total orders: `SELECT COUNT(*) FROM orders`
-   - Clustered orders: `SELECT COUNT(*) FROM clusters`
+  - Clustered orders: `SELECT COUNT(*) FROM orders WHERE cluster_id IS NOT NULL`
+  - Total clusters: `SELECT COUNT(*) FROM clusters`
    - Cluster rate: `(clustered / total) * 100`
    - Avg delivery time: avg of `(delivered_at - created_at)` for delivered orders
+  - Rider efficiency: `(delivered orders with rider in last 7 days) / (total riders)`
    - Daily sales: `SUM(total_price) WHERE DATE(created_at) = TODAY`
    - Most ordered item: `SELECT menu_item_id, COUNT(*) FROM order_items GROUP BY 1 ORDER BY 2 DESC LIMIT 1`
    - Weekly revenue: group orders by day, last 7 days
@@ -1089,10 +1093,10 @@ export const generateMenuTags = async (name, description) => {
 | GET | `/api/admin/analytics` | JWT (admin) | `{ totalOrders, clusteredOrders, clusterRate, avgDeliveryTime, dailySales, mostOrderedItem, weeklyRevenue[] }` |
 
 ### Sprint 3 Acceptance Checklist (Member D — F20)
-- [ ] All stats accurate against test data
-- [ ] Revenue chart renders for partial weeks
-- [ ] Only accessible to admin role
-- [ ] `generateMenuTags` implemented and returns correct types (supports Member C's F13)
+- [x] All stats accurate against test data
+- [x] Revenue chart renders for partial weeks
+- [x] Only accessible to admin role
+- [x] `generateMenuTags` implemented and returns correct types (supports Member C's F13)
 
 ---
 

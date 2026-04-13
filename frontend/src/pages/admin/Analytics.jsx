@@ -61,7 +61,7 @@ const Analytics = () => {
           <Skeleton className="h-4 w-80" />
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 5 }).map((_, idx) => (
+          {Array.from({ length: 6 }).map((_, idx) => (
             <Card key={idx}>
               <CardHeader>
                 <Skeleton className="h-4 w-32" />
@@ -115,6 +115,11 @@ const Analytics = () => {
         <StatCard
           label="Average Delivery Time"
           value={`${Number(data?.avgDeliveryTime || 0).toFixed(1)} mins`}
+        />
+        <StatCard
+          label="Rider Efficiency"
+          value={`${Number(data?.riderEfficiency || 0).toFixed(2)} deliveries/rider`}
+          helper={`${formatCount(data?.deliveredOrdersPerRiderWindow)} delivered across ${formatCount(data?.riderCount)} riders (${Number(data?.riderEfficiencyWindowDays || 7)}d)`}
         />
         <StatCard label="Daily Sales" value={formatMoney(data?.dailySales)} />
         <StatCard

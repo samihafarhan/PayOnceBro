@@ -47,18 +47,31 @@ export const buildWeeklyRevenue = (orders = [], nowInput = new Date()) => {
   return buckets
 }
 
+export const calculateRiderEfficiency = (deliveredOrders = 0, riderCount = 0) => {
+  const deliveries = Number(deliveredOrders || 0)
+  const riders = Number(riderCount || 0)
+  if (riders <= 0) return 0
+  return Number((deliveries / riders).toFixed(2))
+}
+
 export const getAnalytics = async () => {
   const lookbackStart = new Date()
   lookbackStart.setDate(lookbackStart.getDate() - ANALYTICS_LOOKBACK_DAYS)
   lookbackStart.setHours(0, 0, 0, 0)
 
-  const [{ count: totalOrders, error: totalErr }, { count: clusteredOrders, error: clusteredErr }] = await Promise.all([
+  const [
+    { count: totalOrders, error: totalErr },
+    { count: clusteredOrders, error: clusteredErr },
+    { count: totalClusters, error: clustersErr },
+  ] = await Promise.all([
     supabase.from('orders').select('id', { count: 'exact', head: true }),
     supabase.from('orders').select('id', { count: 'exact', head: true }).not('cluster_id', 'is', null),
+    supabase.from('clusters').select('id', { count: 'exact', head: true }),
   ])
 
   if (totalErr) throw totalErr
   if (clusteredErr) throw clusteredErr
+  if (clustersErr) throw clustersErr
 
   const { data: deliveredOrders, error: deliveredErr } = await supabase
     .from('orders')
@@ -125,17 +138,40 @@ export const getAnalytics = async () => {
 
   if (weeklyErr) throw weeklyErr
 
+  const [{ count: ridersCount, error: ridersErr }, { count: deliveredWithRiderCount, error: deliveredWithRiderErr }] =
+    await Promise.all([
+      supabase.from('riders').select('id', { count: 'exact', head: true }),
+      supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'delivered')
+        .not('rider_id', 'is', null)
+        .not('delivered_at', 'is', null)
+        .gte('delivered_at', sevenDaysAgo.toISOString()),
+    ])
+
+  if (ridersErr) throw ridersErr
+  if (deliveredWithRiderErr) throw deliveredWithRiderErr
+
   const buckets = buildWeeklyRevenue(weeklyOrders)
 
   const total = Number(totalOrders || 0)
   const clustered = Number(clusteredOrders || 0)
   const clusterRate = total > 0 ? Number(((clustered / total) * 100).toFixed(2)) : 0
+  const riderCount = Number(ridersCount || 0)
+  const deliveredOrdersPerRiderWindow = Number(deliveredWithRiderCount || 0)
+  const riderEfficiency = calculateRiderEfficiency(deliveredOrdersPerRiderWindow, riderCount)
 
   return {
     totalOrders: total,
     clusteredOrders: clustered,
+    totalClusters: Number(totalClusters || 0),
     clusterRate,
     avgDeliveryTime,
+    riderEfficiency,
+    riderEfficiencyWindowDays: 7,
+    riderCount,
+    deliveredOrdersPerRiderWindow,
     dailySales,
     mostOrderedItem,
     weeklyRevenue: buckets,
