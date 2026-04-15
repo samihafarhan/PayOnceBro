@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { UrlState } from '../../context/AuthContext'
 import Login from './Login'
 import Register from './Register'
+import { Button } from '../../components/ui/button'
 
 const getRoleHome = (role) => {
   const normalized = String(role || '').trim().toLowerCase()

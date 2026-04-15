@@ -21,6 +21,7 @@ const UrlProvider = ({children}) => {
     }
 
     useEffect(() => {
+        let timeoutId
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event) => {
                 if (event === 'INITIAL_SESSION') {
@@ -35,8 +36,22 @@ const UrlProvider = ({children}) => {
                 }
             }
         )
+
+        // Fallback: in some environments INITIAL_SESSION can be delayed.
+        // Prevent app root from staying blank forever.
+        timeoutId = setTimeout(() => {
+            setIsSessionLoaded((prev) => {
+                if (prev) return prev
+                fetchuser()
+                return true
+            })
+        }, 2500)
+
         // Do NOT call fetchuser() here — INITIAL_SESSION always fires and handles it
-        return () => subscription.unsubscribe()
+        return () => {
+            clearTimeout(timeoutId)
+            subscription.unsubscribe()
+        }
     }, [fetchuser])
 
     return (

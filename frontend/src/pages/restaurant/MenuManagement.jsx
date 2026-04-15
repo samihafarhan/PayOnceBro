@@ -8,6 +8,7 @@ import {
   deleteMenuItem,
   updateRestaurantSettings,
 } from '../../services/restaurantService'
+import AiTagBadge from '../../components/restaurant/AiTagBadge'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -340,6 +341,7 @@ const ItemRow = ({ item, onEdit, onDelete, onToggle, busyId }) => {
         {item.description && (
           <p className="text-xs text-gray-500 mt-0.5 truncate">{item.description}</p>
         )}
+        <AiTagBadge tags={item.ai_tags} />
         <p className="text-sm font-semibold text-gray-700 mt-1">
           ৳{Number(item.price).toFixed(0)}
         </p>

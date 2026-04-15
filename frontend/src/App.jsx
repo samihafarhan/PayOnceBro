@@ -113,5 +113,13 @@ const SmartRedirect = () => {
     }
   }, [user, loading, isSessionLoaded, navigate])
 
+  if (loading || !isSessionLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-600">
+        <p className="text-sm font-medium">Loading session...</p>
+      </div>
+    )
+  }
+
   return null
 }
