@@ -1,7 +1,28 @@
 import * as restaurantModel from '../models/restaurantModel.js'
 import * as menuModel from '../models/menuModel.js'
 import { findBestRider } from '../services/riderAssignmentService.js'
-import { generateMenuTags } from '../services/geminiService.js'
+
+const inferFallbackTags = (name = '', description = '') => {
+  const text = `${name} ${description}`.toLowerCase()
+  const tags = new Set()
+  const hasMeat = /\b(beef|chicken|mutton|lamb|prawn|shrimp|fish|tuna|salmon)\b/.test(text)
+
+  if (/\bvegan\b|tofu|plant\s*-?\s*based/.test(text)) tags.add('vegan')
+  // Do not mark vegetarian when the same text clearly mentions meat.
+  if ((/\bvegetarian\b|paneer|veggie/.test(text) || (/vegetable/.test(text) && !hasMeat)) && !hasMeat) {
+    tags.add('vegetarian')
+  }
+  if (/\bhalal\b|beef|chicken|mutton|lamb/.test(text)) tags.add('halal')
+  if (/spicy|chili|chilli|hot\b|jalapeno|pepper/.test(text)) tags.add('spicy')
+  if (/\bmild\b|lightly\s+spiced|butter/.test(text)) tags.add('mild')
+  if (/sweet|dessert|cake|chocolate|honey|sugar/.test(text)) tags.add('sweet')
+  if (/gluten\s*-?\s*free|\bgf\b/.test(text)) tags.add('gluten-free')
+  if (/dairy\s*-?\s*free|lactose\s*-?\s*free/.test(text) || tags.has('vegan')) tags.add('dairy-free')
+  if (/high\s*-?\s*protein|protein\b|beef|chicken|egg/.test(text)) tags.add('high-protein')
+  if (/low\s*-?\s*calorie|salad|steamed|grilled/.test(text)) tags.add('low-calorie')
+
+  return Array.from(tags)
+}
 
 const getDefaultRestaurantName = (email) => {
   const fallback = 'My Restaurant'
@@ -210,7 +231,7 @@ export const addMenuItem = async (req, res, next) => {
 
     let taggedItem = item
     try {
-      const tags = await generateMenuTags(item.name, item.description)
+      const tags = inferFallbackTags(item.name, item.description)
       taggedItem = await menuModel.updateTags(item.id, tags)
     } catch {
       // Menu write should still succeed even if AI tagging fails.
@@ -248,7 +269,7 @@ export const editMenuItem = async (req, res, next) => {
 
     let taggedItem = item
     try {
-      const tags = await generateMenuTags(item.name, item.description)
+      const tags = inferFallbackTags(item.name, item.description)
       taggedItem = await menuModel.updateTags(item.id, tags)
     } catch {
       // Keep successful menu updates even if Gemini is unavailable.

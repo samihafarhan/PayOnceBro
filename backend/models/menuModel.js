@@ -13,6 +13,7 @@ import supabase from '../config/db.js'
  */
 export const searchItems = async (query = '', filters = {}) => {
   const { minPrice, maxPrice, cuisine } = filters
+  const q = query?.trim().toLowerCase() ?? ''
 
   // Start building the database query
   // We join menu_items WITH restaurants so we get location info too
@@ -44,12 +45,7 @@ export const searchItems = async (query = '', filters = {}) => {
   // The .not filter removes rows where restaurant is not active
   // (Supabase doesn't support nested eq directly, so we filter after)
 
-  // Search by name or description if user typed something
-  if (query && query.trim().length > 0) {
-    const q = query.trim().toLowerCase()
-    // ilike means "case-insensitive like" — finds "Burger" even if you type "burger"
-    dbQuery = dbQuery.or(`name.ilike.%${q}%,description.ilike.%${q}%`)
-  }
+  // Query text filtering is handled below in JS so we can include ai_tags matches too.
 
   // Filter by minimum price
   if (minPrice !== undefined && minPrice !== null && minPrice !== '') {
@@ -79,7 +75,24 @@ export const searchItems = async (query = '', filters = {}) => {
     (item) => item.restaurants && item.restaurants.is_active === true
   )
 
-  return filtered
+  // Search should match name, description, category, and AI tags.
+  if (!q) return filtered
+
+  return filtered.filter((item) => {
+    const name = item.name?.toLowerCase() ?? ''
+    const description = item.description?.toLowerCase() ?? ''
+    const category = item.category?.toLowerCase() ?? ''
+    const aiTags = Array.isArray(item.ai_tags)
+      ? item.ai_tags.map((tag) => String(tag).toLowerCase())
+      : []
+
+    return (
+      name.includes(q) ||
+      description.includes(q) ||
+      category.includes(q) ||
+      aiTags.some((tag) => tag.includes(q))
+    )
+  })
 }
 
 /**
