@@ -29,6 +29,7 @@ import AdminLayout from './layouts/AdminLayout';
 import Analytics from './pages/admin/Analytics';
 
 import { Toaster } from './components/ui/sonner';
+import OrderTracking from './pages/user/OrderTracking';
 
 function App() {
   return (
@@ -58,6 +59,7 @@ function App() {
               <Route path="/restaurants/:id" element={<RestaurantProfile />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/orders" element={<Orders />} />
+              <Route path="/orders/:id" element={<OrderTracking />} />
             </Route>
           </Route>
 

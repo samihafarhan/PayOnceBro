@@ -1,563 +1,415 @@
 // frontend/src/components/user/NearbyRestaurantsView.jsx
+// ─────────────────────────────────────────────────────────────────────────────
+// Member 1 — Feature 2 (AI-Based Restaurant Clustering) live view.
 //
-// Shows demo restaurants grouped as Cluster or Standalone.
-// Imports shared data from utils/demoRestaurants.js (same data the map uses).
+// This component REPLACES the previous demo-data version. It now:
+//   1. Fetches real clusters from GET /api/cluster/nearby
+//   2. Fetches the real menu by calling GET /api/public/restaurants/:id on
+//      first expansion of each restaurant card (menus load lazily to keep
+//      the initial view snappy)
+//   3. Integrates with CartContext for "Add to cart"
 //
-// Delivery fee rules:
-//   All cart items from ONE cluster  → cluster (discounted) fee
-//   Any mix (cross-cluster/standard) → sum of individual fees
+// Props:
+//   • userLocation: { lat, lng }  required; used to find nearby clusters
+// ─────────────────────────────────────────────────────────────────────────────
 
-import { useMemo, useState } from 'react'
-import {
-  haversine,
-  allPairsWithinRadius,
-  generateRestaurants,
-  MENUS,
-  CLUSTER_COLORS,
-} from '../../utils/demoRestaurants'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import api from '../../services/api'
+import { getPublicRestaurant } from '../../services/publicRestaurantService'
+import { useCart } from '../../context/CartContext'
+import { toast } from 'sonner'
 
-// ─── Delivery fee calculator ──────────────────────────────────────────────────
-const calcFee = (restaurants, userLat, userLng, isCluster) => {
-  const BASE = 20, PER_KM = 10, DISCOUNT = 0.6
-  const distances = restaurants.map(r => haversine(userLat, userLng, r.lat, r.lng))
-  const normalTotal = distances.reduce((s, d) => s + BASE + d * PER_KM, 0)
-  if (!isCluster) {
-    return {
-      fee: Math.round(normalTotal),
-      savings: 0,
-      breakdown: restaurants.map((r, i) => ({
-        name: r.name,
-        fee: Math.round(BASE + distances[i] * PER_KM),
-      })),
-    }
-  }
-  const maxDist = Math.max(...distances)
-  const clusterFee = (BASE + maxDist * PER_KM) * DISCOUNT
-  return {
-    fee: Math.round(clusterFee),
-    savings: Math.round(normalTotal - clusterFee),
-    breakdown: restaurants.map((r, i) => ({
-      name: r.name,
-      fee: Math.round(BASE + distances[i] * PER_KM),
-    })),
-  }
+// Small colour palette so each cluster gets its own colour on screen.
+const CLUSTER_COLORS = ['#059669', '#7c3aed', '#f97316', '#0ea5e9', '#e11d48']
+
+// Haversine used purely for client-side distance displays (matches backend).
+const haversine = (lat1, lng1, lat2, lng2) => {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-// ─── Determine delivery type + fee for the current cart ──────────────────────
-const getDeliveryInfo = (cartItems, allRestaurants, userLat, userLng) => {
-  const uniqueIds = [...new Set(cartItems.map(i => i.restaurantId))]
-  if (uniqueIds.length === 0) return null
+// ─── Individual restaurant card (expandable) ──────────────────────────────────
 
-  const cartRestaurants = uniqueIds
-    .map(id => allRestaurants.find(r => r.id === id))
-    .filter(Boolean)
+const RestaurantCard = ({ restaurant, clusterColor, distanceKm, userLat, userLng }) => {
+  const [expanded, setExpanded] = useState(false)
+  const [menu, setMenu] = useState(null)
+  const [loadingMenu, setLoadingMenu] = useState(false)
+  const { items, addItem, updateQuantity } = useCart()
 
-  const cartGroups = [...new Set(cartRestaurants.map(r => r.group))]
-  const allInSameCluster = cartGroups.length === 1 && cartGroups[0] !== null
+  // Lazy-load the menu when the user expands for the first time.
+  useEffect(() => {
+    if (!expanded || menu !== null || loadingMenu) return
+    setLoadingMenu(true)
+    getPublicRestaurant(restaurant.id)
+      .then((data) => setMenu(Array.isArray(data.menu) ? data.menu : []))
+      .catch(() => setMenu([]))
+      .finally(() => setLoadingMenu(false))
+  }, [expanded, menu, loadingMenu, restaurant.id])
 
-  if (allInSameCluster) {
-    const feeInfo = calcFee(cartRestaurants, userLat, userLng, true)
-    return {
-      ...feeInfo,
-      type: 'cluster',
-      clusterGroup: cartGroups[0],
-      label: `Cluster ${cartGroups[0]} delivery`,
-    }
+  const qtyOf = (menuItemId) =>
+    items.find((i) => i.menuItemId === menuItemId)?.quantity ?? 0
+
+  const handleAdd = (item) => {
+    addItem(
+      { id: item.id, name: item.name, price: Number(item.price) },
+      { id: restaurant.id, name: restaurant.name }
+    )
+    toast.success(`${item.name} added to cart`)
   }
-
-  const feeInfo = calcFee(cartRestaurants, userLat, userLng, false)
-  const hasClusterRestaurants = cartGroups.some(g => g !== null)
-  const hasStandalone = cartGroups.includes(null)
-  const mixedClusters = cartGroups.filter(Boolean).length > 1
-
-  const label = mixedClusters
-    ? 'Multiple clusters — individual fees'
-    : hasClusterRestaurants && hasStandalone
-      ? 'Cluster + Standard — individual fees'
-      : 'Standard delivery'
-
-  return { ...feeInfo, type: 'mixed', label }
-}
-
-// ─── MenuItem row ─────────────────────────────────────────────────────────────
-const MenuItem = ({ item, restaurantId, cartItems, onAdd, onRemove }) => {
-  const qty = cartItems.find(c => c.itemId === item.id)?.quantity ?? 0
-
-  return (
-    <div className="flex items-center justify-between py-2.5
-                    border-b border-gray-100 last:border-0">
-      <div className="flex-1 min-w-0 pr-3">
-        <p className="text-sm font-medium text-gray-800">{item.name}</p>
-        <p className="text-xs text-orange-600 font-semibold mt-0.5">৳{item.price}</p>
-      </div>
-
-      {qty === 0 ? (
-        <button
-          onClick={() => onAdd(restaurantId, item)}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-orange-500
-                     text-white text-xs font-bold hover:bg-orange-600
-                     active:scale-95 transition-all"
-        >
-          + Add
-        </button>
-      ) : (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onRemove(restaurantId, item.id)}
-            className="w-7 h-7 rounded-full border-2 border-orange-400 text-orange-500
-                       font-bold text-base flex items-center justify-center
-                       hover:bg-orange-50 active:scale-95 transition-all"
-          >
-            −
-          </button>
-          <span className="w-5 text-center text-sm font-bold text-gray-800">{qty}</span>
-          <button
-            onClick={() => onAdd(restaurantId, item)}
-            className="w-7 h-7 rounded-full bg-orange-500 text-white font-bold
-                       text-base flex items-center justify-center
-                       hover:bg-orange-600 active:scale-95 transition-all"
-          >
-            +
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Restaurant card (expandable) ────────────────────────────────────────────
-const RestaurantCard = ({
-  restaurant,
-  clusterColor,
-  isExpanded,
-  onToggle,
-  cartItems,
-  onAdd,
-  onRemove,
-}) => {
-  const menu     = MENUS[restaurant.id] ?? []
-  const itemCount = cartItems.reduce((s, i) => s + i.quantity, 0)
-  const cartSub   = cartItems.reduce((s, i) => s + i.price * i.quantity, 0)
-  const isCluster = !!clusterColor
-
-  // Border colour: cluster group colour or grey
-  const borderStyle = isExpanded
-    ? { border: `2px solid ${clusterColor ?? '#9ca3af'}` }
-    : { border: `2px solid ${clusterColor ? clusterColor + '66' : '#e5e7eb'}` }
 
   return (
     <div
-      className="rounded-2xl overflow-hidden transition-all duration-200 bg-white shadow-sm"
-      style={borderStyle}
+      className="bg-white rounded-xl border shadow-sm overflow-hidden transition-all"
+      style={{ borderColor: clusterColor || '#e5e7eb' }}
     >
-      {/* Header — always visible, click to expand */}
       <button
-        onClick={onToggle}
-        className="w-full text-left px-4 py-3 flex items-center gap-3"
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 transition-colors"
       >
-        {/* Emoji avatar with cluster colour */}
         <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center
-                     text-2xl shrink-0"
-          style={{ background: clusterColor ? clusterColor + '18' : '#f3f4f6' }}
+          className="w-11 h-11 rounded-lg flex items-center justify-center text-white font-black text-lg shrink-0"
+          style={{
+            background: clusterColor
+              ? `linear-gradient(135deg, ${clusterColor}, ${clusterColor}dd)`
+              : 'linear-gradient(135deg, #fb923c, #f43f5e)',
+          }}
         >
-          {restaurant.emoji}
+          {restaurant.name?.[0] || '?'}
         </div>
-
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-gray-900 text-sm">{restaurant.name}</span>
-
-            {/* Cluster badge */}
-            {isCluster && (
-              <span
-                className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                style={{
-                  background: clusterColor + '20',
-                  color: clusterColor,
-                  border: `1px solid ${clusterColor}44`,
-                }}
-              >
-                🔗 Cluster {restaurant.group}
-              </span>
+          <p className="font-bold text-gray-900 truncate">{restaurant.name}</p>
+          <p className="text-xs text-gray-500 truncate">
+            {restaurant.address || '—'}
+          </p>
+          <div className="flex gap-2 mt-0.5 text-[11px] text-gray-500">
+            {typeof distanceKm === 'number' && (
+              <span>📍 {distanceKm.toFixed(2)} km</span>
             )}
-
-            {/* Cart count badge */}
-            {itemCount > 0 && (
-              <span className="text-xs font-bold text-white bg-orange-500
-                               rounded-full px-2 py-0.5 ml-auto shrink-0">
-                {itemCount} in cart · ৳{cartSub}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
-            <span>⭐ {restaurant.avgRating}</span>
-            <span>·</span>
-            <span>📍 {restaurant.distanceKm} km</span>
-            <span>·</span>
-            <span>⏱ {restaurant.avgPrepTime} min</span>
+            {restaurant.avg_prep_time && <span>⏱ ~{restaurant.avg_prep_time} min</span>}
+            {restaurant.avg_rating > 0 && <span>⭐ {Number(restaurant.avg_rating).toFixed(1)}</span>}
           </div>
         </div>
-
-        {/* Chevron */}
-        <span className={`text-gray-400 text-xs transition-transform duration-200 shrink-0
-                          ${isExpanded ? 'rotate-180' : ''}`}>
-          ▼
-        </span>
+        <div className="shrink-0">
+          <Link
+            to={`/restaurants/${restaurant.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs font-semibold text-orange-600 hover:text-orange-700 mr-3"
+          >
+            View
+          </Link>
+          <span className={`text-gray-400 transition-transform inline-block ${expanded ? 'rotate-180' : ''}`}>
+            ▼
+          </span>
+        </div>
       </button>
 
-      {/* Menu — shown when expanded */}
-      {isExpanded && (
-        <div className="px-4 pb-4">
-          <p className="text-xs text-gray-400 mb-2">
-            Tap <strong>+ Add</strong> to add items to your cart
-          </p>
-          {menu.map((item) => (
-            <MenuItem
-              key={item.id}
-              item={item}
-              restaurantId={restaurant.id}
-              cartItems={cartItems}
-              onAdd={onAdd}
-              onRemove={onRemove}
-            />
-          ))}
+      {expanded && (
+        <div className="border-t border-gray-100 px-4 py-3">
+          {loadingMenu && (
+            <p className="text-xs text-gray-400 animate-pulse py-3">Loading menu…</p>
+          )}
+
+          {!loadingMenu && menu && menu.length === 0 && (
+            <p className="text-xs text-gray-400 py-3">No items available right now.</p>
+          )}
+
+          {!loadingMenu && menu && menu.length > 0 && (
+            <ul className="divide-y divide-gray-50">
+              {menu.map((item) => {
+                const qty = qtyOf(item.id)
+                return (
+                  <li key={item.id} className="py-2.5 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                      {item.description && (
+                        <p className="text-xs text-gray-500 line-clamp-1">{item.description}</p>
+                      )}
+                      <p className="text-sm font-bold text-orange-600 mt-0.5">
+                        ৳{Number(item.price).toFixed(0)}
+                      </p>
+                    </div>
+                    {qty === 0 ? (
+                      <button
+                        onClick={() => handleAdd(item)}
+                        className="shrink-0 px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 active:scale-95 transition"
+                      >
+                        + Add
+                      </button>
+                    ) : (
+                      <div className="shrink-0 flex items-center gap-1.5">
+                        <button
+                          onClick={() => updateQuantity(item.id, qty - 1)}
+                          className="w-7 h-7 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold"
+                        >
+                          −
+                        </button>
+                        <span className="text-sm font-semibold w-5 text-center">{qty}</span>
+                        <button
+                          onClick={() => updateQuantity(item.id, qty + 1)}
+                          className="w-7 h-7 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-bold"
+                        >
+                          +
+                        </button>
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
       )}
     </div>
   )
 }
 
-// ─── Sticky cart bar ──────────────────────────────────────────────────────────
-const CartBar = ({ cartItems, allRestaurants, userLat, userLng, onClear }) => {
-  if (cartItems.length === 0) return null
+// ─── Main component ───────────────────────────────────────────────────────────
 
-  const subtotal     = cartItems.reduce((s, i) => s + i.price * i.quantity, 0)
-  const deliveryInfo = getDeliveryInfo(cartItems, allRestaurants, userLat, userLng)
-  const total        = subtotal + (deliveryInfo?.fee ?? 0)
-  const totalItems   = cartItems.reduce((s, i) => s + i.quantity, 0)
-
-  const bannerColor = deliveryInfo?.type === 'cluster'
-    ? CLUSTER_COLORS[deliveryInfo.clusterGroup] ?? '#059669'
-    : '#374151'
-
-  return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-4 pt-2
-                    bg-linear-to-t from-gray-50 via-gray-50/95 to-transparent
-                    pointer-events-none">
-      <div className="max-w-5xl mx-auto pointer-events-auto">
-        <div className="rounded-2xl bg-gray-900 text-white shadow-2xl overflow-hidden">
-
-          {/* Delivery type banner */}
-          <div
-            className="px-4 py-1.5 text-xs font-semibold flex items-center gap-2"
-            style={{ background: bannerColor }}
-          >
-            {deliveryInfo?.type === 'cluster' ? (
-              <>
-                🔗 {deliveryInfo.label}
-                {deliveryInfo.savings > 0 && (
-                  <span className="ml-auto opacity-80">
-                    Saving ৳{deliveryInfo.savings} vs separate orders
-                  </span>
-                )}
-              </>
-            ) : (
-              <>🚚 {deliveryInfo?.label}</>
-            )}
-          </div>
-
-          {/* Main row */}
-          <div className="px-4 py-3 flex items-center gap-4">
-            <div>
-              <p className="text-xs text-gray-400">
-                {totalItems} item{totalItems !== 1 ? 's' : ''}
-              </p>
-              <p className="text-sm font-bold">
-                ৳{subtotal} + ৳{deliveryInfo?.fee ?? 0} delivery
-              </p>
-            </div>
-
-            <div className="ml-auto text-right shrink-0">
-              <p className="text-xs text-gray-400">Total</p>
-              <p className="text-lg font-black">৳{total}</p>
-            </div>
-
-            <button
-              onClick={onClear}
-              className="shrink-0 px-3 py-2 rounded-xl border border-gray-600
-                         text-gray-300 text-xs font-medium
-                         hover:bg-gray-800 transition-colors"
-            >
-              Clear
-            </button>
-
-            <button
-              disabled
-              title="Order placement coming in Sprint 3"
-              className="shrink-0 px-5 py-2 rounded-xl bg-orange-500 text-white
-                         text-sm font-bold opacity-50 cursor-not-allowed"
-            >
-              Place Order
-              <span className="block text-xs font-normal opacity-75">(Sprint 3)</span>
-            </button>
-          </div>
-
-          {/* Per-restaurant breakdown when multiple sources */}
-          {deliveryInfo?.breakdown && deliveryInfo.breakdown.length > 1 && (
-            <div className="px-4 pb-3 flex flex-wrap gap-x-4 gap-y-0.5">
-              {deliveryInfo.breakdown.map((b) => (
-                <span key={b.name} className="text-xs text-gray-500">
-                  {b.name}: ৳{b.fee}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Main export ──────────────────────────────────────────────────────────────
 const NearbyRestaurantsView = ({ userLocation }) => {
-  const { lat, lng } = userLocation
+  const [clusters, setClusters] = useState([])
+  const [nearbyStandalone, setNearbyStandalone] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const { itemCount, subtotal } = useCart()
 
-  const [expandedId, setExpandedId] = useState(null)
-  const [cart, setCart]             = useState([])
+  const lat = userLocation?.lat
+  const lng = userLocation?.lng
 
-  const handleToggle = (id) =>
-    setExpandedId(prev => prev === id ? null : id)
+  // Fetch clusters AND the search results (used to find non-clustered nearby
+  // restaurants). Both calls happen in parallel.
+  const load = useCallback(async () => {
+    if (lat == null || lng == null) return
+    setLoading(true)
+    setError(null)
+    try {
+      // Call 1: clusters near the user
+      const clustersPromise = api
+        .get('/cluster/nearby', { params: { userLat: lat, userLng: lng } })
+        .then((r) => r.data)
 
-  const handleAdd = (restaurantId, item) => {
-    const restaurant = allRestaurants.find(r => r.id === restaurantId)
-    setCart(prev => {
-      const existing = prev.find(c => c.itemId === item.id)
-      if (existing) {
-        return prev.map(c =>
-          c.itemId === item.id ? { ...c, quantity: c.quantity + 1 } : c
-        )
-      }
-      return [...prev, {
-        restaurantId,
-        restaurantGroup: restaurant?.group ?? null,
-        itemId: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: 1,
-      }]
-    })
-  }
+      // Call 2: nearby items (so we can extract all restaurants within range,
+      // not just the clustered ones).
+      const searchPromise = api
+        .get('/search', { params: { userLat: lat, userLng: lng } })
+        .then((r) => r.data)
 
-  const handleRemove = (restaurantId, itemId) => {
-    setCart(prev =>
-      prev
-        .map(c => c.itemId === itemId ? { ...c, quantity: c.quantity - 1 } : c)
-        .filter(c => c.quantity > 0)
-    )
-  }
+      const [clustersData, searchData] = await Promise.all([clustersPromise, searchPromise])
 
-  // Generate + group restaurants — only recalculates when location changes
-  const { allRestaurants, clusters, standalone } = useMemo(() => {
-    const all = generateRestaurants(lat, lng)
-    const byGroup = {}
-    all.forEach(r => {
-      if (!r.group) return
-      if (!byGroup[r.group]) byGroup[r.group] = []
-      byGroup[r.group].push(r)
-    })
-    const validClusters = Object.entries(byGroup)
-      .filter(([, rs]) => allPairsWithinRadius(rs, 2))
+      setClusters(Array.isArray(clustersData.clusters) ? clustersData.clusters : [])
 
-    return {
-      allRestaurants: all,
-      clusters: validClusters,
-      standalone: all.filter(r => !r.group),
+      // Collect all unique restaurants visible in search results
+      const clusteredIds = new Set()
+      ;(clustersData.clusters ?? []).forEach((c) =>
+        (c.restaurants ?? []).forEach((r) => clusteredIds.add(r.id))
+      )
+
+      const seen = new Map() // restaurant.id -> restaurant object
+      ;(searchData.results ?? []).forEach((row) => {
+        const r = row.restaurant
+        if (!r?.id || clusteredIds.has(r.id)) return
+        if (!seen.has(r.id)) {
+          seen.set(r.id, {
+            ...r,
+            distanceKm: row.distanceKm ?? haversine(lat, lng, r.lat, r.lng),
+          })
+        }
+      })
+
+      // Show up to 10 nearest standalone restaurants
+      const standalone = [...seen.values()]
+        .filter((r) => r.lat != null && r.lng != null)
+        .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))
+        .slice(0, 10)
+
+      setNearbyStandalone(standalone)
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || 'Failed to load restaurants')
+    } finally {
+      setLoading(false)
     }
   }, [lat, lng])
 
-  const cartFor = (restaurantId) =>
-    cart.filter(c => c.restaurantId === restaurantId)
+  useEffect(() => {
+    load()
+  }, [load])
 
-  const clusterCount  = clusters.reduce((s, [, rs]) => s + rs.length, 0)
-  const standardCount = standalone.length
+  // Decorated clusters with distanceKm per restaurant for display
+  const decoratedClusters = useMemo(
+    () =>
+      clusters.map((c, i) => ({
+        ...c,
+        color: CLUSTER_COLORS[i % CLUSTER_COLORS.length],
+        letter: String.fromCharCode(65 + i), // A, B, C ...
+        restaurants: (c.restaurants ?? []).map((r) => ({
+          ...r,
+          distanceKm: haversine(lat ?? 0, lng ?? 0, r.lat, r.lng),
+        })),
+      })),
+    [clusters, lat, lng]
+  )
+
+  // ─── Loading state ──────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((n) => (
+          <div key={n} className="h-20 rounded-xl bg-gray-100 animate-pulse" />
+        ))}
+      </div>
+    )
+  }
+
+  // ─── Error state ────────────────────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        {error}
+      </div>
+    )
+  }
+
+  const hasClusters = decoratedClusters.length > 0
+  const hasStandalone = nearbyStandalone.length > 0
+
+  // ─── Empty state ────────────────────────────────────────────────────────
+  if (!hasClusters && !hasStandalone) {
+    return (
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 text-center">
+        <span className="text-3xl">🍽️</span>
+        <p className="text-sm text-gray-500 mt-2">
+          No restaurants near this location. Try moving your location.
+        </p>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6 pb-36">
-
-      {/* ── Summary ──────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-white border border-gray-200 shadow-sm
-                      px-4 py-3 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <p className="font-bold text-gray-900 text-sm">
-            {clusterCount + standardCount} restaurants near this location
-          </p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Click a restaurant to browse its menu and add items
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold
-                           px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700">
-            🔗 {clusterCount} in clusters
-          </span>
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold
-                           px-3 py-1.5 rounded-full bg-gray-100 text-gray-600">
-            🚚 {standardCount} standard
-          </span>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════
-          SECTION 1 — CLUSTER DELIVERY
-          ══════════════════════════════════════════════════════════════ */}
-      <section>
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="w-2 h-7 rounded-full bg-emerald-500" />
-          <h2 className="font-black text-gray-900 text-lg">🔗 Cluster Delivery</h2>
-        </div>
-        <p className="text-xs text-gray-500 ml-4.5 mb-4">
-          Restaurants within <strong>2 km</strong> of each other. You can order from
-          <em> any one, two, or all</em> — as long as your whole cart stays within the
-          same cluster, you get the discounted combined delivery fee.
-        </p>
-
-        {clusters.map(([groupId, restaurants]) => {
-          let maxIntraKm = 0
-          for (let i = 0; i < restaurants.length; i++)
-            for (let j = i + 1; j < restaurants.length; j++) {
-              const d = haversine(restaurants[i].lat, restaurants[i].lng, restaurants[j].lat, restaurants[j].lng)
-              if (d > maxIntraKm) maxIntraKm = d
-            }
-
-          const clusterFeePreview = calcFee(restaurants, lat, lng, true)
-          const color = CLUSTER_COLORS[groupId] ?? '#059669'
-
-          return (
-            <div key={groupId} className="mb-5">
-              {/* Cluster header bar */}
-              <div
-                className="rounded-t-2xl px-4 py-3 flex items-center justify-between"
-                style={{ background: color }}
-              >
-                <div>
-                  <p className="font-black text-white text-sm">
-                    Cluster {groupId} · {restaurants.length} restaurants
-                  </p>
-                  <p className="text-xs opacity-80 text-white mt-0.5">
-                    All within {(maxIntraKm * 1000).toFixed(0)} m of each other
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-white opacity-75">Combined delivery</p>
-                  <p className="text-sm font-black text-white">৳{clusterFeePreview.fee}</p>
-                  {clusterFeePreview.savings > 0 && (
-                    <p className="text-xs text-white opacity-75">
-                      Save ৳{clusterFeePreview.savings}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Restaurant cards */}
-              <div
-                className="rounded-b-2xl overflow-hidden divide-y"
-                style={{
-                  border: `2px solid ${color}44`,
-                  borderTop: 'none',
-                  divideColor: color + '22',
-                }}
-              >
-                {restaurants.map((r) => (
-                  <RestaurantCard
-                    key={r.id}
-                    restaurant={r}
-                    clusterColor={color}
-                    isExpanded={expandedId === r.id}
-                    onToggle={() => handleToggle(r.id)}
-                    cartItems={cartFor(r.id)}
-                    onAdd={handleAdd}
-                    onRemove={handleRemove}
-                  />
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </section>
-
-      {/* ── Divider ──────────────────────────────────────────────── */}
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200" />
-        </div>
-        <div className="relative flex justify-center">
-          <span className="bg-gray-50 px-4 text-xs text-gray-400 font-semibold
-                           uppercase tracking-widest">
-            Outside cluster range
-          </span>
-        </div>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════
-          SECTION 2 — STANDARD DELIVERY
-          ══════════════════════════════════════════════════════════════ */}
-      <section>
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="w-2 h-7 rounded-full bg-gray-400" />
-          <h2 className="font-black text-gray-900 text-lg">🚚 Standard Delivery</h2>
-        </div>
-        <p className="text-xs text-gray-500 ml-4.5 mb-4">
-          Too far from the clusters for a combined pickup. Ordering from these —
-          or mixing with a cluster — applies individual fees per restaurant.
-        </p>
-
-        <div className="space-y-3">
-          {standalone.map((r) => (
-            <RestaurantCard
-              key={r.id}
-              restaurant={r}
-              clusterColor={null}
-              isExpanded={expandedId === r.id}
-              onToggle={() => handleToggle(r.id)}
-              cartItems={cartFor(r.id)}
-              onAdd={handleAdd}
-              onRemove={handleRemove}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* ── Fee explainer ────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-blue-50 border border-blue-200 px-4 py-4 space-y-2">
-        <p className="text-xs font-bold text-blue-800">ℹ️ How delivery fees work</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-blue-700">
-          <div className="flex items-start gap-2">
-            <span className="font-bold shrink-0">🔗</span>
-            <span>
-              <strong>Same cluster only</strong> — one combined fee, 40% discount on the
-              longest pickup distance.
-            </span>
+    <div className="space-y-6 pb-32">
+      {/* ─── Clusters ────────────────────────────────────────────────────── */}
+      {hasClusters && (
+        <section>
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-2 h-7 rounded-full bg-emerald-500" />
+            <h2 className="font-black text-gray-900 text-lg">
+              🔗 Clustered — combined delivery available
+            </h2>
           </div>
-          <div className="flex items-start gap-2">
-            <span className="font-bold shrink-0">🚚</span>
-            <span>
-              <strong>Mixed sources</strong> — individual fee per restaurant added
-              together, no discount.
+          <p className="text-xs text-gray-500 ml-4 mb-4">
+            Restaurants within 2 km of each other. Order from any combination in the
+            same cluster for one combined delivery fee.
+          </p>
+
+          <div className="space-y-6">
+            {decoratedClusters.map((cluster) => (
+              <div
+                key={cluster.letter}
+                className="rounded-2xl border-2 p-4 bg-white"
+                style={{ borderColor: cluster.color }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <span
+                    className="text-white font-black text-sm rounded-full w-7 h-7 flex items-center justify-center"
+                    style={{ background: cluster.color }}
+                  >
+                    {cluster.letter}
+                  </span>
+                  <p className="text-sm font-bold text-gray-800">
+                    Cluster {cluster.letter} · {cluster.restaurantCount} restaurant
+                    {cluster.restaurantCount !== 1 ? 's' : ''}
+                  </p>
+                  <span className="ml-auto text-xs text-gray-500">
+                    max {cluster.maxDistanceKm?.toFixed?.(2) ?? '?'} km apart
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {cluster.restaurants.map((r) => (
+                    <RestaurantCard
+                      key={r.id}
+                      restaurant={r}
+                      clusterColor={cluster.color}
+                      distanceKm={r.distanceKm}
+                      userLat={lat}
+                      userLng={lng}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ─── Divider ────────────────────────────────────────────────────── */}
+      {hasClusters && hasStandalone && (
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200" />
+          </div>
+          <div className="relative flex justify-center">
+            <span className="bg-gray-50 px-4 text-xs text-gray-400 font-semibold uppercase tracking-widest">
+              Outside cluster range
             </span>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Sticky cart bar */}
-      <CartBar
-        cartItems={cart}
-        allRestaurants={allRestaurants}
-        userLat={lat}
-        userLng={lng}
-        onClear={() => setCart([])}
-      />
+      {/* ─── Standalone ──────────────────────────────────────────────────── */}
+      {hasStandalone && (
+        <section>
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-2 h-7 rounded-full bg-gray-400" />
+            <h2 className="font-black text-gray-900 text-lg">🚚 Standard Delivery</h2>
+          </div>
+          <p className="text-xs text-gray-500 ml-4 mb-4">
+            These restaurants aren't close enough to any other for a combined pickup —
+            ordering from them uses a regular per-restaurant delivery fee.
+          </p>
+          <div className="space-y-3">
+            {nearbyStandalone.map((r) => (
+              <RestaurantCard
+                key={r.id}
+                restaurant={r}
+                clusterColor={null}
+                distanceKm={r.distanceKm}
+                userLat={lat}
+                userLng={lng}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ─── Sticky cart bar ────────────────────────────────────────────── */}
+      {itemCount > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-4 pt-2 bg-gradient-to-t from-gray-50 via-gray-50/95 to-transparent pointer-events-none">
+          <div className="max-w-5xl mx-auto pointer-events-auto">
+            <Link
+              to="/cart"
+              className="flex items-center justify-between gap-3 px-5 py-3 rounded-2xl bg-gray-900 text-white shadow-2xl hover:bg-gray-800 active:scale-[0.99] transition"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🛒</span>
+                <div className="text-left">
+                  <p className="text-xs text-gray-300">
+                    {itemCount} item{itemCount !== 1 ? 's' : ''} in cart
+                  </p>
+                  <p className="text-sm font-bold">৳{subtotal.toFixed(0)} + delivery</p>
+                </div>
+              </div>
+              <span className="text-sm font-bold">View cart →</span>
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

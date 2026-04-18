@@ -14,6 +14,8 @@ import riderRoutes from './routes/riderRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import ratingRoutes from './routes/ratingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import publicRestaurantRoutes from './routes/publicRestaurantRoutes.js';
+import orderTrackingRoutes    from './routes/orderTrackingRoutes.js';
 
 const app = express();
 
@@ -56,7 +58,8 @@ app.use('/api/rider',       riderRoutes);
 app.use('/api/orders',      orderRoutes);
 app.use('/api/ratings',     ratingRoutes);
 app.use('/api/admin',       adminRoutes);
-
+app.use('/api/public/restaurants', publicRestaurantRoutes);
+app.use('/api/order-tracking',     orderTrackingRoutes);
 app.use(errorHandler);
 
 export default app;
