@@ -17,7 +17,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../../context/CartContext'
 import CartItem from '../../components/user/CartItem'
 import CartSummary from '../../components/user/CartSummary'
@@ -31,6 +31,7 @@ import { toast } from 'sonner'
 const DHAKA_DEFAULT = { lat: 23.7808, lng: 90.4154 }
 
 const Cart = () => {
+  const navigate = useNavigate()
   const {
     items,
     itemsByRestaurant,
@@ -55,7 +56,9 @@ const Cart = () => {
   // Keep the local "granted" indicator in sync with context (covers the case
   // where location was set by another page — e.g. the map picker on Search).
   useEffect(() => {
-    if (userLocation?.lat && userLocation?.lng) setLocationStatus('granted')
+    if (Number.isFinite(userLocation?.lat) && Number.isFinite(userLocation?.lng)) {
+      setLocationStatus('granted')
+    }
   }, [userLocation])
 
   const requestLocation = () => {
@@ -112,7 +115,7 @@ const Cart = () => {
 
   const handlePlaceOrder = async () => {
     if (!items.length) return
-    if (!userLocation?.lat || !userLocation?.lng) {
+    if (!Number.isFinite(userLocation?.lat) || !Number.isFinite(userLocation?.lng)) {
       toast.error('Please set your delivery location before ordering.')
       return
     }
@@ -133,6 +136,7 @@ const Cart = () => {
       const result = await placeOrder(payload)
       clearCart()
       toast.success(`Order placed — ID ${String(result.orderId).slice(0, 8).toUpperCase()}`)
+      navigate(`/orders/${result.orderId}`)
     } catch (err) {
       toast.error(
         err?.response?.data?.message || "Couldn't place your order. Please try again."
@@ -330,7 +334,7 @@ const Cart = () => {
         isOpen={showMapPicker}
         onClose={() => setShowMapPicker(false)}
         initialLocation={
-          userLocation?.lat && userLocation?.lng
+          Number.isFinite(userLocation?.lat) && Number.isFinite(userLocation?.lng)
             ? { lat: userLocation.lat, lng: userLocation.lng }
             : DHAKA_DEFAULT
         }

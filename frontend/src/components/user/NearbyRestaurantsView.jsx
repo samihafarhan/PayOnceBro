@@ -38,7 +38,7 @@ const haversine = (lat1, lng1, lat2, lng2) => {
 
 // ─── Individual restaurant card (expandable) ──────────────────────────────────
 
-const RestaurantCard = ({ restaurant, clusterColor, distanceKm, userLat, userLng }) => {
+const RestaurantCard = ({ restaurant, clusterColor, distanceKm }) => {
   const [expanded, setExpanded] = useState(false)
   const [menu, setMenu] = useState(null)
   const [loadingMenu, setLoadingMenu] = useState(false)
@@ -337,8 +337,6 @@ const NearbyRestaurantsView = ({ userLocation }) => {
                       restaurant={r}
                       clusterColor={cluster.color}
                       distanceKm={r.distanceKm}
-                      userLat={lat}
-                      userLng={lng}
                     />
                   ))}
                 </div>
@@ -380,8 +378,6 @@ const NearbyRestaurantsView = ({ userLocation }) => {
                 restaurant={r}
                 clusterColor={null}
                 distanceKm={r.distanceKm}
-                userLat={lat}
-                userLng={lng}
               />
             ))}
           </div>

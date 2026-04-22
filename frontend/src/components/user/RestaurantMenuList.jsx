@@ -8,7 +8,7 @@ import { useMemo } from 'react'
 import { useCart } from '../../context/CartContext'
 import { toast } from 'sonner'
 
-const MenuItemRow = ({ item, restaurant, qtyInCart, onAdd, onChangeQty, onRemove }) => (
+const MenuItemRow = ({ item, restaurant, qtyInCart, onAdd, onChangeQty }) => (
   <div className="flex items-start gap-3 py-3">
     {item.image_url && (
       <img

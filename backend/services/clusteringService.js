@@ -132,12 +132,12 @@ export const findClusters = (restaurants, radiusKm = DEFAULT_RADIUS_KM) => {
     if (assigned.has(restaurants[i].id)) continue
 
     const base = restaurants[i]
-    if (!base.lat || !base.lng) continue
+    if (base.lat == null || base.lng == null) continue
 
     // Find all restaurants within radius of the base restaurant
     const nearby = restaurants.filter((r) => {
       if (r.id === base.id) return false
-      if (!r.lat || !r.lng) return false
+      if (r.lat == null || r.lng == null) return false
       const dist = haversineDistance(base.lat, base.lng, r.lat, r.lng)
       return dist <= radiusKm
     })

@@ -17,11 +17,13 @@
 // backend — no manual reload needed.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import useOrderTracking from '../../hooks/useOrderTracking'
 import OrderProgressBar from '../../components/user/OrderProgressBar'
 import OrderStatusTimeline from '../../components/user/OrderStatusTimeline'
 import OrderETABadge from '../../components/user/OrderETABadge'
+import RatingModal from '../../components/user/RatingModal'
 
 const formatStatus = (status) =>
   String(status || '').replaceAll('_', ' ').toUpperCase()
@@ -55,6 +57,52 @@ const groupItemsByRestaurant = (items = []) => {
 const OrderTracking = () => {
   const { id } = useParams()
   const { tracking, history, loading, error } = useOrderTracking(id)
+  const [ratingModal, setRatingModal] = useState({
+    isOpen: false,
+    type: 'restaurant',
+    restaurantId: null,
+    riderId: null,
+  })
+  const [hasAutoPrompted, setHasAutoPrompted] = useState(false)
+
+  const order = tracking?.order
+  const items = tracking?.items ?? []
+  const cluster = tracking?.cluster ?? null
+  const rider = tracking?.rider ?? null
+  const orderStatus = order?.status
+  const orderRiderId = order?.rider_id ?? null
+  const restaurantGroups = groupItemsByRestaurant(items)
+  const firstRestaurantId = restaurantGroups.find((group) => group?.id && group.id !== 'unknown')?.id ?? null
+
+  const subtotal = items.reduce(
+    (sum, i) => sum + Number(i.priceAtOrder || 0) * Number(i.quantity || 0),
+    0
+  )
+  const deliveryFee = Number(order.delivery_fee || 0)
+  const total = Number(order.total_price || subtotal + deliveryFee)
+
+  useEffect(() => {
+    if (orderStatus !== 'delivered' || hasAutoPrompted) return
+    if (firstRestaurantId) {
+      setRatingModal({
+        isOpen: true,
+        type: 'restaurant',
+        restaurantId: firstRestaurantId,
+        riderId: orderRiderId,
+      })
+      setHasAutoPrompted(true)
+      return
+    }
+    if (orderRiderId) {
+      setRatingModal({
+        isOpen: true,
+        type: 'rider',
+        restaurantId: null,
+        riderId: orderRiderId,
+      })
+      setHasAutoPrompted(true)
+    }
+  }, [orderStatus, orderRiderId, firstRestaurantId, hasAutoPrompted])
 
   if (loading) {
     return (
@@ -66,7 +114,7 @@ const OrderTracking = () => {
     )
   }
 
-  if (error || !tracking) {
+  if (error || !tracking || !order) {
     return (
       <div className="max-w-3xl mx-auto p-4">
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -81,16 +129,6 @@ const OrderTracking = () => {
       </div>
     )
   }
-
-  const { order, items, cluster, rider } = tracking
-  const restaurantGroups = groupItemsByRestaurant(items)
-
-  const subtotal = items.reduce(
-    (sum, i) => sum + Number(i.priceAtOrder || 0) * Number(i.quantity || 0),
-    0
-  )
-  const deliveryFee = Number(order.delivery_fee || 0)
-  const total = Number(order.total_price || subtotal + deliveryFee)
 
   return (
     <div className="max-w-3xl mx-auto p-4 pb-10">
@@ -217,6 +255,55 @@ const OrderTracking = () => {
 
       {/* Status history timeline */}
       <OrderStatusTimeline history={history} />
+
+      {orderStatus === 'delivered' && (
+        <div className="mt-4 flex gap-2 flex-wrap">
+          {firstRestaurantId && (
+            <button
+              onClick={() =>
+                setRatingModal({
+                  isOpen: true,
+                  type: 'restaurant',
+                  restaurantId: firstRestaurantId,
+                    riderId: orderRiderId,
+                })
+              }
+              className="px-3 py-2 text-xs font-semibold rounded-lg bg-orange-600 text-white hover:bg-orange-700"
+            >
+              Rate restaurant
+            </button>
+          )}
+          {orderRiderId && (
+            <button
+              onClick={() =>
+                setRatingModal({
+                  isOpen: true,
+                  type: 'rider',
+                  restaurantId: null,
+                  riderId: orderRiderId,
+                })
+              }
+              className="px-3 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Rate rider
+            </button>
+          )}
+        </div>
+      )}
+
+      <RatingModal
+        isOpen={ratingModal.isOpen}
+        orderId={order.id}
+        restaurantId={ratingModal.restaurantId}
+        riderId={ratingModal.riderId}
+        type={ratingModal.type}
+        onClose={() =>
+          setRatingModal((prev) => ({
+            ...prev,
+            isOpen: false,
+          }))
+        }
+      />
     </div>
   )
 }

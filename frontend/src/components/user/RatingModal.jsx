@@ -80,7 +80,7 @@ const RatingModal = ({
       console.error(`Failed to submit ${type} rating:`, err);
       
       // Handle duplicate rating (409 conflict)
-      if (err.message === 'You already rated this delivery. Thank you!') {
+      if (err.message === 'You already rated this delivery before. Thank you!') {
         setError(err.message);
         setIsSubmitted(true);
         setTimeout(() => {
