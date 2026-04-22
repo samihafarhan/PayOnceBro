@@ -306,7 +306,7 @@ export const getRoute = async (req, res, next) => {
     }
 
     if (!order) {
-      return res.status(403).json({ message: 'No active assigned order found for this cluster' })
+      return res.status(403).json({ message: 'You do not have an active order assigned to this cluster' })
     }
 
     // Build stops array: restaurants + customer
