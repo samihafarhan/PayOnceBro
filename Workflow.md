@@ -30,7 +30,7 @@ Each sprint delivers **exactly 5 features**. Since there are 4 members, one memb
 | **Sprint 3** | Full Order Lifecycle | Member B (F7 + F9) | F5, F7, F9, F13, F20 |
 | **Sprint 4** | AI & Polish | Member D (F16 + F17) | F4, F10, F15, F16, F17 |
 
-**Cumulative progress:** Sprint 1 → 5 features | Sprint 2 → 10 features | Sprint 3 → 15 features | Sprint 4 → 20 features (complete)
+**Cumulative progress:** Sprint 1 → 5 features | Sprint 2 → 10 features | Sprint 3 → 15 features (complete) | Sprint 4 → pending
 
 ---
 
@@ -875,7 +875,7 @@ backend/models/riderModel.js               ← getAvailable (add to Member B's m
 
 ---
 
-## S3 — Feature 5: Live Order Tracking (Member A)
+## S3 — Feature 5: Live Order Tracking (Member A) ✅ DONE
 
 ### Goal
 Users see real-time delivery updates after placing an order. Status changes, rider location, and a visual timeline.
@@ -900,15 +900,15 @@ frontend/src/components/user/RatingModal.jsx
 ```
 
 ### Sprint 3 Acceptance Checklist (Member A — F5)
-- [ ] Order placed successfully, `orderId` returned
-- [ ] Tracking page shows correct initial status
-- [ ] Status updates appear within 2 seconds of DB change
-- [ ] Rating modal appears automatically on delivery
-- [ ] Rating modal submits to `POST /api/ratings` (Member C's endpoint, F14)
+- [x] Order placed successfully, `orderId` returned
+- [x] Tracking page shows correct initial status
+- [x] Status updates appear within 2 seconds of DB change
+- [x] Rating modal appears automatically on delivery
+- [x] Rating modal submits to `POST /api/ratings` (Member C's endpoint, F14)
 
 ---
 
-## S3 — Feature 7: AI Route Optimization (Member B)
+## S3 — Feature 7: AI Route Optimization (Member B) ✅ DONE
 
 ### Goal
 The system determines the shortest pickup order for riders with multiple restaurant stops, optimizes the sequence to reduce travel distance, and provides a navigation link.
@@ -966,13 +966,13 @@ export const optimizeRoute = (stops, riderLocation) => {
 | GET | `/api/rider/route/:clusterId` | JWT (rider) | `{ orderedStops[], mapsUrl, totalDistance }` |
 
 ### Sprint 3 Acceptance Checklist (Member B — F7)
-- [ ] 3-restaurant cluster returns correctly ordered stops
-- [ ] Google Maps URL opens with correct waypoints
-- [ ] Total distance displayed in km
+- [x] 3-restaurant cluster returns correctly ordered stops
+- [x] Google Maps URL opens with correct waypoints
+- [x] Total distance displayed in km
 
 ---
 
-## S3 — Feature 9: Rider Rating System (Member B)
+## S3 — Feature 9: Rider Rating System (Member B) ✅ DONE
 
 ### Goal
 After delivery, users rate riders (1–5 stars) and leave short feedback. The system calculates average ratings for riders. Low ratings trigger an alert to the system admin.
@@ -993,14 +993,14 @@ frontend/src/components/common/StarRating.jsx
 ```
 
 ### Sprint 3 Acceptance Checklist (Member B — F9)
-- [ ] Can only rate once per order per rider
-- [ ] Average updates after each new rating
-- [ ] Admin notification created when avg drops below 3.0
-- [ ] Rider dashboard displays current average rating
+- [x] Can only rate once per order per rider
+- [x] Average updates after each new rating
+- [x] Admin notification created when avg drops below 3.0
+- [x] Rider dashboard displays current average rating
 
 ---
 
-## S3 — Feature 13: AI Menu Auto-Tagging & Dietary Profiling (Member C)
+## S3 — Feature 13: AI Menu Auto-Tagging & Dietary Profiling (Member C) ✅ DONE
 
 ### Goal
 On menu item create/edit, Gemini auto-generates dietary and flavor tags stored in the `ai_tags` JSONB column. Tags are used in search filtering and Combo Builder (Sprint 4).
@@ -1026,16 +1026,16 @@ Example: ["halal", "spicy"]`;
 
 ### Files (Member C)
 ```
-backend/controllers/menuController.js     ← call geminiService.generateMenuTags after save
+backend/controllers/restaurantController.js ← call geminiService.generateMenuTags after save
 frontend/src/components/restaurant/AiTagBadge.jsx
 ```
 > `geminiService.generateMenuTags` is Member D's. Member C calls it from the menu controller. Member D must implement the `generateMenuTags` method in `geminiService.js` before or during this sprint.
 
 ### Sprint 3 Acceptance Checklist (Member C — F13)
-- [ ] Tags generated within 3 seconds of item save
-- [ ] Malformed Gemini response caught — item saved without tags, no crash
-- [ ] Tags visible on user search results and filter correctly
-- [ ] AI badge shown on tagged items in restaurant menu view
+- [x] Tags generated within 3 seconds of item save
+- [x] Malformed Gemini response caught — item saved without tags, no crash
+- [x] Tags visible on user search results and filter correctly
+- [x] AI badge shown on tagged items in restaurant menu view
 
 ---
 

@@ -51,7 +51,7 @@ export const search = async (req, res, next) => {
       let distanceKm = null
       let isClusterEligible = false
 
-      if (hasLocation && restaurant?.lat && restaurant?.lng) {
+      if (hasLocation && restaurant?.lat != null && restaurant?.lng != null) {
         distanceKm = haversineDistance(
           userLatNum,
           userLngNum,

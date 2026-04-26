@@ -291,16 +291,22 @@ export const getRoute = async (req, res, next) => {
     const restaurantIds = cluster.restaurant_ids || []
     const restaurants = await restaurantModel.getByIds(restaurantIds)
 
-    // Get customer order and address
-    const { data: order } = await supabase
+    // Get customer order and address (must belong to the logged-in rider)
+    const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, user_lat, user_lng, cluster_id')
+      .select('id, user_lat, user_lng, cluster_id, rider_id, status')
       .eq('cluster_id', clusterId)
+      .eq('rider_id', rider.id)
+      .in('status', ['accepted', 'preparing', 'pickup', 'on_the_way'])
       .limit(1)
       .single()
 
+    if (orderError && orderError.code !== 'PGRST116') {
+      throw orderError
+    }
+
     if (!order) {
-      return res.status(404).json({ message: 'Order not found for cluster' })
+      return res.status(403).json({ message: 'You do not have an active order assigned to this cluster' })
     }
 
     // Build stops array: restaurants + customer

@@ -1,6 +1,7 @@
 import * as restaurantModel from '../models/restaurantModel.js'
 import * as menuModel from '../models/menuModel.js'
 import { findBestRider } from '../services/riderAssignmentService.js'
+import { generateMenuTags } from '../services/geminiService.js'
 
 const inferFallbackTags = (name = '', description = '') => {
   const text = `${name} ${description}`.toLowerCase()
@@ -22,6 +23,21 @@ const inferFallbackTags = (name = '', description = '') => {
   if (/low\s*-?\s*calorie|salad|steamed|grilled/.test(text)) tags.add('low-calorie')
 
   return Array.from(tags)
+}
+
+const getMenuTags = async (name = '', description = '') => {
+  const fallback = inferFallbackTags(name, description)
+
+  try {
+    const aiTags = await generateMenuTags(name, description)
+    if (Array.isArray(aiTags) && aiTags.length > 0) {
+      return [...new Set([...aiTags, ...fallback])]
+    }
+  } catch {
+    // Fallback below
+  }
+
+  return fallback
 }
 
 const getDefaultRestaurantName = (email) => {
@@ -231,7 +247,7 @@ export const addMenuItem = async (req, res, next) => {
 
     let taggedItem = item
     try {
-      const tags = inferFallbackTags(item.name, item.description)
+      const tags = await getMenuTags(item.name, item.description)
       taggedItem = await menuModel.updateTags(item.id, tags)
     } catch {
       // Menu write should still succeed even if AI tagging fails.
@@ -269,7 +285,7 @@ export const editMenuItem = async (req, res, next) => {
 
     let taggedItem = item
     try {
-      const tags = inferFallbackTags(item.name, item.description)
+      const tags = await getMenuTags(item.name, item.description)
       taggedItem = await menuModel.updateTags(item.id, tags)
     } catch {
       // Keep successful menu updates even if Gemini is unavailable.
