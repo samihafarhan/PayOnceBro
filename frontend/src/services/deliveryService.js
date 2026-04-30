@@ -20,7 +20,7 @@ export const getDeliveryFee = async ({ restaurantIds, userLat, userLng, isCluste
 }
 
 export const getETA = async ({ restaurantIds, userLat, userLng }) => {
-  const { data } = await api.post('/cluster/eta', {
+  const { data } = await api.post('/delivery/eta', {
     restaurantIds,
     userLat,
     userLng,

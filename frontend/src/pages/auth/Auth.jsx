@@ -4,14 +4,7 @@ import { UrlState } from '../../context/AuthContext'
 import Login from './Login'
 import Register from './Register'
 import { Button } from '../../components/ui/button'
-
-const getRoleHome = (role) => {
-  const normalized = String(role || '').trim().toLowerCase()
-  if (normalized === 'restaurant_owner' || normalized === 'restaurant') return '/restaurant/dashboard'
-  if (normalized === 'rider') return '/rider/dashboard'
-  if (normalized === 'admin') return '/admin/analytics'
-  return '/home'
-}
+import { getRoleHome } from '../../utils/roleHome'
 
 /**
  * Combined Login / Sign Up page — mount at the /auth route.

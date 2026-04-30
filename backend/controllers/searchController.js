@@ -1,25 +1,6 @@
 import * as menuModel from '../models/menuModel.js'
 import { sortByProximity } from '../services/clusteringService.js'
-
-/**
- * Haversine distance formula — calculates distance between two GPS points.
- *
- * Imagine the Earth is a big ball. Two restaurants are dots on that ball.
- * This formula tells us how many kilometres apart those dots are.
- *
- * @returns distance in kilometres
- */
-const haversineDistance = (lat1, lng1, lat2, lng2) => {
-  const R = 6371 // Earth's radius in km
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLng = ((lng2 - lng1) * Math.PI) / 180
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
+import { haversineDistance } from '../utils/geoUtils.js'
 
 /**
  * GET /api/search

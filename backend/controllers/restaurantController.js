@@ -187,7 +187,11 @@ export const updateOrderStatus = async (req, res, next) => {
 
     // Keep assignment behavior consistent with /orders/:id/status flow.
     if (status === 'accepted') {
-      await findBestRider(orderId)
+      try {
+        await findBestRider(orderId)
+      } catch (assignErr) {
+        console.error(`❌ Rider assignment failed for order ${orderId}:`, assignErr?.message || assignErr)
+      }
     }
 
     res.json({ order: updated })

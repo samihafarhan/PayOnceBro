@@ -277,11 +277,15 @@ export const getRoute = async (req, res, next) => {
     }
 
     // Get cluster details
-    const { data: cluster } = await supabase
+    const { data: cluster, error: clusterError } = await supabase
       .from('clusters')
       .select('restaurant_ids, id')
       .eq('id', clusterId)
       .single()
+
+    if (clusterError && clusterError.code !== 'PGRST116') {
+      throw clusterError
+    }
 
     if (!cluster) {
       return res.status(404).json({ message: 'Cluster not found' })

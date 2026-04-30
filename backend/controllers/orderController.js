@@ -96,10 +96,12 @@ export const placeOrder = async (req, res, next) => {
       priceAtOrder: menuMap.get(i.menuItemId).price,
     }))
     await orderModel.createItems(order.id, itemPayload)
+    let historyWriteFailed = false
     try {
       await orderModel.insertStatusHistory(order.id, 'pending', req.user.id)
     } catch (historyErr) {
       console.warn('Order status history insert failed on placeOrder:', historyErr?.message || historyErr)
+      historyWriteFailed = true
     }
 
     res.status(201).json({
@@ -107,6 +109,7 @@ export const placeOrder = async (req, res, next) => {
       clusterId,
       fee: feeResult.fee,
       estimatedMinutes: eta.estimatedMinutes,
+      historyWriteFailed,
     })
   } catch (err) {
     next(err)
@@ -133,7 +136,7 @@ export const getById = async (req, res, next) => {
       }
     }
 
-    if (role === 'restaurant_owner' || role === 'restaurant') {
+    if (role === 'restaurant_owner') {
       const ownsOrder = await orderModel.isOwnedByRestaurantOwner(id, req.user.id)
       if (!ownsOrder) {
         return res.status(403).json({ message: 'Access denied' })
@@ -173,7 +176,7 @@ export const updateStatus = async (req, res, next) => {
     const role = req.user.role
     let allowed = []
 
-    if (role === 'restaurant_owner' || role === 'restaurant') {
+    if (role === 'restaurant_owner') {
       const ownsOrder = await orderModel.isOwnedByRestaurantOwner(orderId, req.user.id)
       if (!ownsOrder) {
         return res.status(403).json({ message: 'This order does not belong to your restaurant' })
@@ -204,13 +207,15 @@ export const updateStatus = async (req, res, next) => {
     }
 
     const updated = await orderModel.updateStatus(orderId, status)
+    let historyWriteFailed = false
     try {
       await orderModel.insertStatusHistory(orderId, status, req.user.id)
     } catch (historyErr) {
       console.warn('Order status history insert failed on updateStatus:', historyErr?.message || historyErr)
+      historyWriteFailed = true
     }
 
-    if ((role === 'restaurant_owner' || role === 'restaurant') && status === 'accepted') {
+    if (role === 'restaurant_owner' && status === 'accepted') {
       try {
         const assignmentResult = await findBestRider(orderId)
         if (assignmentResult) {
@@ -231,7 +236,7 @@ export const updateStatus = async (req, res, next) => {
       }
     }
 
-    res.json({ order: updated })
+    res.json({ order: updated, historyWriteFailed })
   } catch (err) {
     next(err)
   }

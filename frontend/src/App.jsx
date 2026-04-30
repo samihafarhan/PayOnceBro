@@ -30,6 +30,7 @@ import Analytics from './pages/admin/Analytics';
 
 import { Toaster } from './components/ui/sonner';
 import OrderTracking from './pages/user/OrderTracking';
+import { getRoleHome } from './utils/roleHome';
 
 function App() {
   return (
@@ -102,17 +103,7 @@ const SmartRedirect = () => {
       navigate('/auth', { replace: true })
       return
     }
-    const role = user?.role?.trim().toLowerCase()
-
-    if (role === 'restaurant_owner' || role === 'restaurant') {
-      navigate('/restaurant/dashboard', { replace: true })
-    } else if (role === 'rider') {
-      navigate('/rider/dashboard', { replace: true })
-    } else if (role === 'admin') {
-      navigate('/admin/analytics', { replace: true })
-    } else {
-      navigate('/home', { replace: true })
-    }
+    navigate(getRoleHome(user?.role), { replace: true })
   }, [user, loading, isSessionLoaded, navigate])
 
   if (loading || !isSessionLoaded) {

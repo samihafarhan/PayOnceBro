@@ -1,19 +1,21 @@
 import supabase from '../config/db.js'
+import { normalizeRole } from '../utils/normalizeRole.js'
 
-const ALLOWED_ROLES = new Set(['user', 'rider', 'restaurant_owner', 'admin'])
+const ALLOWED_ROLES = new Set(['user', 'rider', 'restaurant_owner'])
 
 export const register = async (req, res, next) => {
   try {
-    const { email, password, role, username, full_name } = req.body
-    const normalizedRole = String(role || '').trim().toLowerCase()
+    const { email, password, role, username, full_name, name } = req.body
+    const normalizedRole = normalizeRole(role)
+    const resolvedFullName = (full_name || name || '').trim()
 
-    if (!email || !password || !role || !username || !full_name) {
+    if (!email || !password || !role || !username || !resolvedFullName) {
       return res.status(400).json({ message: 'All fields are required' })
     }
 
     if (!ALLOWED_ROLES.has(normalizedRole)) {
       return res.status(400).json({
-        message: "Invalid role. Allowed roles: 'user', 'rider', 'restaurant_owner', 'admin'.",
+        message: "Invalid role. Allowed roles: 'user', 'rider', 'restaurant_owner'.",
       })
     }
 
@@ -34,11 +36,11 @@ export const register = async (req, res, next) => {
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert(
-          { id: data.user.id, username, full_name, role: normalizedRole },
+          { id: data.user.id, username, full_name: resolvedFullName, role: normalizedRole },
           { onConflict: 'id' }
         );
       if (profileError) {
-        console.error('Profile upsert error:', profileError.message);
+        return res.status(500).json({ message: 'Account created but profile setup failed. Please try again.' })
       }
 
       if (normalizedRole === 'rider') {
@@ -59,7 +61,7 @@ export const register = async (req, res, next) => {
             })
 
           if (riderError) {
-            console.error('Rider create error:', riderError.message)
+            return res.status(500).json({ message: 'Account created but rider setup failed. Please try again.' })
           }
         }
       }
@@ -76,12 +78,12 @@ export const register = async (req, res, next) => {
             .from('restaurants')
             .insert({
               owner_id: data.user.id,
-              name: `${full_name}'s Restaurant`,
+              name: `${resolvedFullName}'s Restaurant`,
               is_active: true,
             })
 
           if (restaurantError) {
-            console.error('Restaurant create error:', restaurantError.message)
+            return res.status(500).json({ message: 'Account created but restaurant setup failed. Please try again.' })
           }
         }
       }
@@ -89,6 +91,7 @@ export const register = async (req, res, next) => {
 
     res.status(201).json({
       session: data.session,
+      token: data.session?.access_token ?? null,
       user: data.user,
     })
   } catch (err) {
@@ -124,10 +127,11 @@ export const login = async (req, res, next) => {
       session: data.session,
       user: {
         ...data.user,
-        role: profile?.role ?? data.user.user_metadata?.role ?? 'user',
+        role: normalizeRole(profile?.role ?? data.user.user_metadata?.role ?? 'user'),
         username: profile?.username ?? null,
         full_name: profile?.full_name ?? null,
       },
+      token: data.session?.access_token ?? null,
     })
   } catch (err) {
     next(err)
@@ -136,10 +140,9 @@ export const login = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(' ')[1]
-    if (token) {
-      // Invalidate the session server-side using the service role client
-      await supabase.auth.admin.signOut(token)
+    if (req.user?.id) {
+      // Revoke all refresh tokens for this user on logout.
+      await supabase.auth.admin.signOut(req.user.id)
     }
     res.json({ success: true })
   } catch (err) {
@@ -163,14 +166,13 @@ export const getMe = async (req, res, next) => {
       user: {
         id: req.user.id,
         email: req.user.email,
-        role: profile?.role ?? req.user.role ?? 'user',
+        role: normalizeRole(profile?.role ?? req.user.role ?? 'user'),
         username: profile?.username ?? null,
         full_name: profile?.full_name ?? null,
         created_at: profile?.created_at ?? null,
       },
     })
   } catch (err) {
-    console.error('getMe error:', err);
     next(err)
   }
 }

@@ -2,6 +2,7 @@
 // Data layer — raw Supabase queries only, no business logic
 
 import supabase from '../config/db.js'
+const isMissingRow = (error) => error?.code === 'PGRST116'
 
 /**
  * getById — fetch a single rider by ID with all fields.
@@ -16,8 +17,8 @@ export const getById = async (id) => {
 
   // .single() throws if no rows or > 1 rows — handle gracefully
   if (error) {
-    console.error('Rider getById error:', error)
-    return null
+    if (isMissingRow(error)) return null
+    throw error
   }
   return data
 }
@@ -33,8 +34,8 @@ export const getByUserId = async (userId) => {
     .single()
 
   if (error) {
-    console.error('Rider getByUserId error:', error)
-    return null
+    if (isMissingRow(error)) return null
+    throw error
   }
   return data
 }
@@ -54,29 +55,6 @@ export const getAvailable = async () => {
 }
 
 /**
- * updateLocation — update rider's current coordinates.
- * Called every 30 seconds by the rider's location tracker.
- * Returns null if rider doesn't exist or fails to update.
- */
-export const updateLocation = async (riderId, lat, lng) => {
-  const { data, error } = await supabase
-    .from('riders')
-    .update({
-      current_lat: lat,
-      current_lng: lng,
-    })
-    .eq('id', riderId)
-    .select('id, current_lat, current_lng')
-    .single()
-
-  if (error) {
-    console.error('Failed to update rider location:', error)
-    return null
-  }
-  return data
-}
-
-/**
  * updateLocationByUserId — update rider coords using user_id.
  */
 export const updateLocationByUserId = async (userId, lat, lng) => {
@@ -91,8 +69,8 @@ export const updateLocationByUserId = async (userId, lat, lng) => {
     .single()
 
   if (error) {
-    console.error('Failed to update rider location by user_id:', error)
-    return null
+    if (isMissingRow(error)) return null
+    throw error
   }
   return data
 }
@@ -128,30 +106,9 @@ export const getLocation = async (riderId) => {
     .single()
 
   if (error) {
-    console.error('Rider getLocation error:', error)
-    return null
+    if (isMissingRow(error)) return null
+    throw error
   }
-  return data
-}
-
-/**
- * create — create a new rider record (triggered when a user registers as rider).
- */
-export const create = async (userId, lat = 0, lng = 0) => {
-  const { data, error } = await supabase
-    .from('riders')
-    .insert({
-      user_id: userId,
-      current_lat: lat,
-      current_lng: lng,
-      is_available: true,
-      avg_rating: 0,
-      total_deliveries: 0,
-    })
-    .select('*')
-    .single()
-
-  if (error) throw error
   return data
 }
 
