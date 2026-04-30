@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react'
 import useRestaurantOrders from '../../hooks/useRestaurantOrders'
 import OrderCard from '../../components/restaurant/OrderCard'
 import LocationPickerMap from '../../components/user/LocationPickerMap'
+import { Button } from '../../components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../components/ui/dropdown-menu'
 import { getProfile, updateProfile } from '../../services/restaurantService'
 import { toast } from 'sonner'
 
@@ -82,6 +89,7 @@ const RestaurantDetailsPanel = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [showMapPicker, setShowMapPicker] = useState(false)
   const [showSetupModal, setShowSetupModal] = useState(false)
 
@@ -294,26 +302,48 @@ const RestaurantDetailsPanel = () => {
         }
       />
 
-      <form onSubmit={handleSave} className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 p-5 space-y-5">
-        <div className="flex items-start justify-between gap-3">
+      <form onSubmit={handleSave} className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setIsDetailsOpen((prev) => !prev)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setIsDetailsOpen((prev) => !prev)
+            }
+          }}
+          className="flex items-start justify-between gap-3 p-5 cursor-pointer"
+        >
           <div>
             <h2 className="text-lg font-bold text-gray-800">Restaurant Details</h2>
             <p className="text-xs text-gray-500 mt-1">
-              Update your profile and operation settings from the restaurants table.
+              Click to {isDetailsOpen ? 'collapse' : 'expand'} and update your restaurant information.
             </p>
           </div>
-          <label className="inline-flex items-center gap-2 text-sm text-gray-600">
-            <input
-              type="checkbox"
-              checked={!!form.is_active}
-              onChange={updateField('is_active')}
-              className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-            />
-            Active
-          </label>
+          <div className="flex items-center gap-4">
+            <label
+              className="inline-flex items-center gap-2 text-sm text-gray-600"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <input
+                type="checkbox"
+                checked={!!form.is_active}
+                onChange={updateField('is_active')}
+                className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+              />
+              Active
+            </label>
+            <span className="text-xs font-medium text-orange-700">
+              {isDetailsOpen ? 'Hide details' : 'Show details'}
+            </span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {isDetailsOpen && (
+          <div className="border-t border-gray-100 p-5 space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Restaurant name</label>
             <input
@@ -410,17 +440,19 @@ const RestaurantDetailsPanel = () => {
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
           </div>
-        </div>
+            </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 transition-colors"
-          >
-            {saving ? 'Saving…' : 'Save restaurant details'}
-          </button>
-        </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 rounded-md text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 transition-colors"
+              >
+                {saving ? 'Saving…' : 'Save restaurant details'}
+              </button>
+            </div>
+          </div>
+        )}
       </form>
     </>
   )
@@ -433,6 +465,8 @@ const Dashboard = () => {
   const { data: orders, loading, refresh } = useRestaurantOrders()
 
   const list = orders?.[activeTab] ?? []
+  const activeTabConfig = TABS.find((tab) => tab.key === activeTab) ?? TABS[0]
+  const activeCount = orders?.[activeTabConfig.key]?.length ?? 0
 
   return (
     <div>
@@ -455,36 +489,49 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 border-b border-gray-200 mb-6">
-        {TABS.map(({ key, label }) => {
-          const count = orders?.[key]?.length ?? 0
-          const isActive = activeTab === key
-          return (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key)}
-              className={`relative px-4 py-2 text-sm font-medium rounded-t-md transition-colors ${
-                isActive
-                  ? 'text-orange-700 border-b-2 border-orange-600 bg-orange-50'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {label}
-              {count > 0 && (
+      {/* Order status selector */}
+      <div className="mb-6">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="min-w-56 justify-between">
+              <span>{activeTabConfig.label}</span>
+              {activeCount > 0 && (
                 <span
                   className={`ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-xs font-bold ${
-                    key === 'pending'
+                    activeTabConfig.key === 'pending'
                       ? 'bg-red-500 text-white'
                       : 'bg-gray-200 text-gray-600'
                   }`}
                 >
-                  {count}
+                  {activeCount}
                 </span>
               )}
-            </button>
-          )
-        })}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {TABS.map(({ key, label }) => {
+              const count = orders?.[key]?.length ?? 0
+              return (
+                <DropdownMenuItem key={key} onClick={() => setActiveTab(key)}>
+                  <span className="flex w-full items-center justify-between gap-2">
+                    <span>{label}</span>
+                    {count > 0 && (
+                      <span
+                        className={`inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-xs font-bold ${
+                          key === 'pending'
+                            ? 'bg-red-500 text-white'
+                            : 'bg-gray-200 text-gray-600'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </span>
+                </DropdownMenuItem>
+              )
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Order grid */}
