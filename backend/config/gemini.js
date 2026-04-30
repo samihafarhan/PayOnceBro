@@ -9,7 +9,7 @@ if (!apiKey) {
 const client = apiKey ? new GoogleGenerativeAI(apiKey) : null
 
 const model = client
-  ? client.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-1.5-flash' })
+  ? client.getGenerativeModel({ model: process.env.GEMINI_MODEL || 'gemini-2.5-flash' })
   : null
 
 export default model
