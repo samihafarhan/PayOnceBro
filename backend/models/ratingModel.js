@@ -149,6 +149,18 @@ export const findExistingRiderRating = async (orderId, userId, riderId) => {
   return (data ?? [])[0] ?? null
 }
 
+export const orderIncludesRider = async (orderId, riderId) => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('id', orderId)
+    .eq('rider_id', riderId)
+    .limit(1)
+
+  if (error) throw error
+  return (data ?? []).length > 0
+}
+
 export const createRiderRating = async ({ orderId, userId, riderId, score, reviewText }) => {
   const { data, error } = await supabase
     .from('ratings')
@@ -181,14 +193,3 @@ export const calculateRiderAverage = async (riderId) => {
   return Number((total / scores.length).toFixed(2))
 }
 
-export const updateRiderAverage = async (riderId, avgRating) => {
-  const { data, error } = await supabase
-    .from('riders')
-    .update({ avg_rating: avgRating })
-    .eq('id', riderId)
-    .select('id, avg_rating')
-    .single()
-
-  if (error) throw error
-  return data
-}

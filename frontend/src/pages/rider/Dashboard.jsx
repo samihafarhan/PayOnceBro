@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import StatusButtons from '../../components/rider/StatusButtons.jsx'
 import { getProfile, getAssignments, getEarnings } from '../../services/riderService.js'
 import { toast } from 'sonner'
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
+import { Badge } from '../../components/ui/badge'
 
 const Dashboard = () => {
   const navigate = useNavigate()
@@ -54,121 +57,95 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
+      <div className="text-center py-10 text-muted-foreground">
         <p>Loading dashboard...</p>
       </div>
     )
   }
 
   return (
-    <div>
-      <h1>Rider Dashboard</h1>
+    <div className="space-y-5">
+      <h1 className="text-2xl font-semibold text-foreground">Rider Dashboard</h1>
 
       {/* Rider Profile Summary */}
       {riderProfile ? (
-        <div style={{
-          padding: '20px',
-          background: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          marginBottom: '20px'
-        }}>
-          <div style={{ display: 'grid', gap: '15px', gridTemplateColumns: '1fr 1fr 1fr' }}>
+        <Card>
+          <CardContent className="pt-6">
+          <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <p style={{ fontSize: '12px', color: '#666' }}>Avg Rating</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold' }}>
+              <p className="text-xs text-muted-foreground">Avg Rating</p>
+              <p className="text-2xl font-bold">
                 {riderProfile.avg_rating?.toFixed(1) || '0.0'} ⭐
               </p>
             </div>
             <div>
-              <p style={{ fontSize: '12px', color: '#666' }}>Total Deliveries</p>
-              <p style={{ fontSize: '24px', fontWeight: 'bold' }}>
+              <p className="text-xs text-muted-foreground">Total Deliveries</p>
+              <p className="text-2xl font-bold">
                 {riderProfile.total_deliveries || 0}
               </p>
             </div>
             <div>
-              <p style={{ fontSize: '12px', color: '#666' }}>Status</p>
-              <p style={{ fontSize: '16px', fontWeight: 'bold', color: riderProfile.is_available ? 'green' : 'orange' }}>
-                {riderProfile.is_available ? '● Available' : '● On Delivery'}
-              </p>
+              <p className="text-xs text-muted-foreground">Status</p>
+              <Badge variant={riderProfile.is_available ? 'default' : 'secondary'}>
+                {riderProfile.is_available ? 'Available' : 'On Delivery'}
+              </Badge>
             </div>
           </div>
-        </div>
+          </CardContent>
+        </Card>
       ) : (
-        <div style={{
-          padding: '20px',
-          background: '#f3f4f6',
-          borderRadius: '8px',
-          marginBottom: '20px',
-          color: '#666',
-          fontSize: '14px'
-        }}>
+        <Card className="bg-muted/30">
+          <CardContent className="pt-6 text-sm text-muted-foreground">
           Loading your profile...
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Active Assignments */}
-      <div style={{
-        padding: '20px',
-        background: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        marginBottom: '20px'
-      }}>
-        <h3>Current Assignments</h3>
+      <Card>
+        <CardHeader>
+          <CardTitle>Current Assignments</CardTitle>
+        </CardHeader>
+        <CardContent>
         
         {assignments.length === 0 ? (
-          <p style={{ color: '#666', fontStyle: 'italic' }}>
+          <p className="text-muted-foreground italic">
             No active assignments. You'll receive new deliveries when they're available.
           </p>
         ) : (
-          <div style={{ display: 'grid', gap: '15px' }}>
+          <div className="grid gap-4">
             {assignments.map(order => (
               <div
                 key={order.id}
-                style={{
-                  padding: '15px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  background: '#fafafa'
-                }}
+                className="p-4 border border-border rounded-md bg-muted/20"
               >
-                <div style={{ marginBottom: '15px' }}>
-                  <p style={{ fontSize: '14px', color: '#666' }}>
-                    Order ID: <span style={{ fontWeight: 'bold' }}>{order.id.slice(0, 8)}</span>
+                <div className="mb-4 space-y-1">
+                  <p className="text-sm text-muted-foreground">
+                    Order ID: <span className="font-semibold text-foreground">{order.id.slice(0, 8)}</span>
                   </p>
-                  <p style={{ fontSize: '14px', color: '#666' }}>
-                    Status: <span style={{ fontWeight: 'bold', color: '#2563eb' }}>
+                  <p className="text-sm text-muted-foreground">
+                    Status: <span className="font-semibold text-primary">
                       {order.status}
                     </span>
                   </p>
-                  <p style={{ fontSize: '14px', color: '#666' }}>
-                    Stops: <span style={{ fontWeight: 'bold' }}>{order.restaurants?.length || 0}</span>
+                  <p className="text-sm text-muted-foreground">
+                    Stops: <span className="font-semibold text-foreground">{order.restaurants?.length || 0}</span>
                   </p>
-                  <p style={{ fontSize: '14px', color: '#666' }}>
-                    Items: <span style={{ fontWeight: 'bold' }}>{order.itemCount || 0}</span>
+                  <p className="text-sm text-muted-foreground">
+                    Items: <span className="font-semibold text-foreground">{order.itemCount || 0}</span>
                   </p>
                 </div>
 
                 {/* View Route and Status Update Buttons */}
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                <div className="flex gap-2 mb-4">
                   {order.cluster_id && (
-                    <button
+                    <Button
+                      type="button"
                       onClick={() => navigate(`/rider/route?clusterId=${order.cluster_id}`)}
-                      style={{
-                        flex: 1,
-                        padding: '8px 12px',
-                        background: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: '500'
-                      }}
+                      className="flex-1"
                     >
                       🗺️ View Route
-                    </button>
+                    </Button>
                   )}
                 </div>
 
@@ -182,27 +159,27 @@ const Dashboard = () => {
             ))}
           </div>
         )}
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Today's Earnings Placeholder */}
-      <div style={{
-        padding: '20px',
-        background: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <h3>Today's Performance</h3>
-        <div style={{ display: 'grid', gap: '15px', gridTemplateColumns: '1fr 1fr' }}>
+      <Card>
+        <CardHeader>
+          <CardTitle>Today's Performance</CardTitle>
+        </CardHeader>
+        <CardContent>
+        <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <p style={{ fontSize: '12px', color: '#666' }}>Earnings</p>
-            <p style={{ fontSize: '20px', fontWeight: 'bold' }}>৳{Number(earnings.todayEarnings || 0).toFixed(0)}</p>
+            <p className="text-xs text-muted-foreground">Earnings</p>
+            <p className="text-xl font-bold">৳{Number(earnings.todayEarnings || 0).toFixed(0)}</p>
           </div>
           <div>
-            <p style={{ fontSize: '12px', color: '#666' }}>Deliveries</p>
-            <p style={{ fontSize: '20px', fontWeight: 'bold' }}>{earnings.todayDeliveries || 0}</p>
+            <p className="text-xs text-muted-foreground">Deliveries</p>
+            <p className="text-xl font-bold">{earnings.todayDeliveries || 0}</p>
           </div>
         </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

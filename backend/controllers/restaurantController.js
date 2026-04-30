@@ -27,16 +27,29 @@ const inferFallbackTags = (name = '', description = '') => {
 
 const getMenuTags = async (name = '', description = '') => {
   const fallback = inferFallbackTags(name, description)
+  // #region agent log
+  fetch('http://127.0.0.1:7418/ingest/e23e83d9-a344-4b52-b5e9-54a81aa66b54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'27b7b0'},body:JSON.stringify({sessionId:'27b7b0',runId:'pre-fix',hypothesisId:'H3',location:'backend/controllers/restaurantController.js:getMenuTags:entry',message:'Tag generation started with fallback precomputed',data:{nameLength:name.length,descriptionLength:description.length,fallbackTags:fallback,fallbackCount:fallback.length},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
 
   try {
     const aiTags = await generateMenuTags(name, description)
+    // #region agent log
+    fetch('http://127.0.0.1:7418/ingest/e23e83d9-a344-4b52-b5e9-54a81aa66b54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'27b7b0'},body:JSON.stringify({sessionId:'27b7b0',runId:'pre-fix',hypothesisId:'H3',location:'backend/controllers/restaurantController.js:getMenuTags:afterAi',message:'AI tags returned from Gemini service',data:{aiTags:Array.isArray(aiTags)?aiTags:[],aiTagCount:Array.isArray(aiTags)?aiTags.length:0},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (Array.isArray(aiTags) && aiTags.length > 0) {
-      return [...new Set([...aiTags, ...fallback])]
+      const merged = [...new Set([...aiTags, ...fallback])]
+      // #region agent log
+      fetch('http://127.0.0.1:7418/ingest/e23e83d9-a344-4b52-b5e9-54a81aa66b54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'27b7b0'},body:JSON.stringify({sessionId:'27b7b0',runId:'pre-fix',hypothesisId:'H3',location:'backend/controllers/restaurantController.js:getMenuTags:merged',message:'Merged AI and fallback tags',data:{mergedTags:merged,mergedCount:merged.length},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      return merged
     }
   } catch {
     // Fallback below
   }
 
+  // #region agent log
+  fetch('http://127.0.0.1:7418/ingest/e23e83d9-a344-4b52-b5e9-54a81aa66b54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'27b7b0'},body:JSON.stringify({sessionId:'27b7b0',runId:'pre-fix',hypothesisId:'H4',location:'backend/controllers/restaurantController.js:getMenuTags:fallbackOnly',message:'Using fallback tags only',data:{fallbackTags:fallback,fallbackCount:fallback.length},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   return fallback
 }
 
@@ -187,7 +200,11 @@ export const updateOrderStatus = async (req, res, next) => {
 
     // Keep assignment behavior consistent with /orders/:id/status flow.
     if (status === 'accepted') {
-      await findBestRider(orderId)
+      try {
+        await findBestRider(orderId)
+      } catch (assignErr) {
+        console.error(`❌ Rider assignment failed for order ${orderId}:`, assignErr?.message || assignErr)
+      }
     }
 
     res.json({ order: updated })
@@ -249,6 +266,9 @@ export const addMenuItem = async (req, res, next) => {
     try {
       const tags = await getMenuTags(item.name, item.description)
       taggedItem = await menuModel.updateTags(item.id, tags)
+      // #region agent log
+      fetch('http://127.0.0.1:7418/ingest/e23e83d9-a344-4b52-b5e9-54a81aa66b54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'27b7b0'},body:JSON.stringify({sessionId:'27b7b0',runId:'pre-fix',hypothesisId:'H5',location:'backend/controllers/restaurantController.js:addMenuItem:dbWrite',message:'Tags written to menu item',data:{itemId:item.id,savedTags:Array.isArray(taggedItem?.ai_tags)?taggedItem.ai_tags:[],savedTagCount:Array.isArray(taggedItem?.ai_tags)?taggedItem.ai_tags.length:0},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
     } catch {
       // Menu write should still succeed even if AI tagging fails.
     }

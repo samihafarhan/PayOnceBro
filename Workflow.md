@@ -17,6 +17,10 @@
 
 > **Important:** Member D owns the Gemini client setup (`geminiService.js`), order placement backend, rider assignment logic, and shared infrastructure (fee engine, aggregation). Other members **call** Member D's services where needed — they never rewrite them. Each member builds their own features end-to-end (backend + frontend) within their domain.
 
+### Contract Alignment Note (Canonical Roles)
+- Canonical roles across backend/frontend are: `user`, `rider`, `restaurant_owner`, `admin`.
+- Legacy `restaurant` values should be normalized to `restaurant_owner` for compatibility, but new writes and route guards must use `restaurant_owner`.
+
 ---
 
 ## Sprint Philosophy
@@ -244,6 +248,22 @@ order_items (id UUID PK, order_id UUID FK orders, menu_item_id UUID FK menu_item
 
 -- SHARED
 ratings (id UUID PK, order_id UUID FK orders, rated_by UUID FK users, rider_id UUID FK riders NULLABLE, restaurant_id UUID FK restaurants NULLABLE, score INT CHECK(score BETWEEN 1 AND 5), review_text TEXT, created_at TIMESTAMPTZ)
+```
+
+### Runtime Schema Additions Required By Current Sprint 1-3 Code
+The live implementation uses a few additional tables/columns beyond the baseline schema above:
+
+```sql
+-- Used by auth/session profile hydration
+profiles (id UUID PK, role TEXT, username TEXT, full_name TEXT, created_at TIMESTAMPTZ DEFAULT NOW())
+
+-- Used by order placement/tracking and rider route computation
+orders.user_lat FLOAT
+orders.user_lng FLOAT
+orders.delivered_at TIMESTAMPTZ NULL
+
+-- Used for non-blocking status timeline history
+order_status_history (id UUID PK, order_id UUID FK orders, status TEXT, changed_by UUID FK users, created_at TIMESTAMPTZ DEFAULT NOW())
 ```
 
 ---
@@ -870,6 +890,7 @@ backend/models/riderModel.js               ← getAvailable (add to Member B's m
 
 # SPRINT 3 — Full Order Lifecycle
 **Duration:** Week 5–7  
+**Status:** 5 of 5 features DONE.  
 **Double Duty:** Member B (F7 + F9)  
 **Shared Goal:** The complete order lifecycle works end-to-end: user places order → restaurant accepts → rider assigned → rider follows optimized route → rider delivers → user rates rider and restaurant. AI auto-tagging populates menu data. Analytics dashboard shows real numbers.
 
@@ -1039,9 +1060,7 @@ frontend/src/components/restaurant/AiTagBadge.jsx
 
 ---
 
-## S3 — Feature 20: Analytics Dashboard (Member D)
-
-✅ DONE
+## S3 — Feature 20: Analytics Dashboard (Member D) ✅ DONE
 
 ### Goal
 Admin can see real platform data: total orders, clustered orders, cluster success rate, average delivery time, rider efficiency, daily sales, most ordered item, and weekly revenue graphs.

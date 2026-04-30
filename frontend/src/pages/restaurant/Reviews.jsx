@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import ReviewList from '../../components/restaurant/ReviewList'
 import { addRestaurantReviewResponse, getRestaurantReviews } from '../../services/restaurantService'
 import { toast } from 'sonner'
+import { Badge } from '../../components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Skeleton } from '../../components/ui/skeleton'
 
 const Reviews = () => {
   const [reviews, setReviews] = useState([])
@@ -48,22 +51,30 @@ const Reviews = () => {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-extrabold text-gray-900">Reviews</h1>
-        <p className="text-sm text-gray-500 mt-1">Read customer feedback and respond as the restaurant owner.</p>
-      </div>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-3xl">Reviews</CardTitle>
+          <CardDescription>Read customer feedback and respond as the restaurant owner.</CardDescription>
+        </CardHeader>
+      </Card>
 
       {restaurant && (
-        <div className="mb-4 bg-white rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700">
-          <span className="font-semibold">{restaurant.name}</span>
-          <span className="ml-3 text-amber-600 font-semibold">⭐ {Number(restaurant.avg_rating || 0).toFixed(2)}</span>
-        </div>
+        <Card className="mb-4">
+          <CardContent className="py-3 text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">{restaurant.name}</span>
+            <Badge className="ml-3" variant="secondary">⭐ {Number(restaurant.avg_rating || 0).toFixed(2)}</Badge>
+          </CardContent>
+        </Card>
       )}
 
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="bg-white rounded-xl border border-gray-200 p-4 h-28 animate-pulse" />
+            <Card key={n}>
+              <CardContent>
+                <Skeleton className="h-24 w-full rounded-md" />
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (

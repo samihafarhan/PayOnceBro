@@ -1,4 +1,5 @@
 import supabase from '../config/db.js'
+import { normalizeRole } from '../utils/normalizeRole.js'
 
 export const protect = async (req, res, next) => {
   try {
@@ -16,16 +17,20 @@ export const protect = async (req, res, next) => {
 
     // Fetch role from the profiles table so it stays in sync with DB
     // rather than relying solely on JWT metadata (which can lag after role changes)
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
 
+    if (profileError && profileError.code !== 'PGRST116') {
+      return res.status(401).json({ message: 'Not authorised, user profile lookup failed' })
+    }
+
     // profile?.role can be 'user' as a trigger default even for non-user roles.
     // Prefer the profile DB value; fall back to JWT metadata only if DB has no row.
-    const dbRole = profile?.role ?? null
-    const metaRole = user.user_metadata?.role ?? 'user'
+    const dbRole = normalizeRole(profile?.role ?? null)
+    const metaRole = normalizeRole(user.user_metadata?.role ?? 'user')
 
     req.user = {
       id: user.id,

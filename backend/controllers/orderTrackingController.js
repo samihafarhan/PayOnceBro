@@ -169,9 +169,8 @@ export const getStatusHistory = async (req, res, next) => {
     const order = await loadOwnedOrder(req, res)
     if (!order) return
 
-    // Select * so we're resilient to whichever timestamp column exists
-    // (created_at / changed_at). We sort on the client side too, but try
-    // common names here first.
+    // Select * to keep payload forward-compatible; timeline timestamps use
+    // created_at as the canonical field.
     const { data, error } = await supabase
       .from('order_status_history')
       .select('*')

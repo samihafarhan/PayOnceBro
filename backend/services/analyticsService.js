@@ -157,7 +157,7 @@ export const getAnalytics = async () => {
     .from('riders')
     .select('id, user_id, avg_rating, total_deliveries, is_available')
     .lt('avg_rating', 3)
-    .order('avg_rating', { ascending: false })
+    .order('avg_rating', { ascending: true })
     .limit(10)
 
   if (lowRatedErr) throw lowRatedErr

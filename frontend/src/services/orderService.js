@@ -11,11 +11,6 @@ export const placeOrder = async ({ items, restaurantIds, userLat, userLng, isClu
   return data
 }
 
-export const getOrder = async (orderId) => {
-  const { data } = await api.get(`/orders/${orderId}`)
-  return data
-}
-
 export const getMyOrders = async () => {
   const { data } = await api.get('/orders/my')
   return data

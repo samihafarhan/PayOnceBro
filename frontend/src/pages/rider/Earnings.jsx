@@ -107,7 +107,7 @@ const Earnings = () => {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Earnings</span>
-                  <span className="font-semibold">₹{(earnings.earnings?.weekly || 0).toFixed(2)}</span>
+                  <span className="font-semibold">৳{(earnings.earnings?.weekly || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Deliveries</span>
@@ -116,7 +116,7 @@ const Earnings = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Avg per Delivery</span>
                   <span className="font-semibold">
-                    ₹{earnings.deliveries?.weekly > 0 
+                    ৳{earnings.deliveries?.weekly > 0 
                       ? ((earnings.earnings?.weekly || 0) / earnings.deliveries?.weekly).toFixed(2)
                       : '0.00'}
                   </span>
@@ -130,7 +130,7 @@ const Earnings = () => {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Earnings</span>
-                  <span className="font-semibold">₹{(earnings.earnings?.monthly || 0).toFixed(2)}</span>
+                  <span className="font-semibold">৳{(earnings.earnings?.monthly || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Deliveries</span>
@@ -139,7 +139,7 @@ const Earnings = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Avg per Delivery</span>
                   <span className="font-semibold">
-                    ₹{earnings.deliveries?.monthly > 0 
+                    ৳{earnings.deliveries?.monthly > 0 
                       ? ((earnings.earnings?.monthly || 0) / earnings.deliveries?.monthly).toFixed(2)
                       : '0.00'}
                   </span>
@@ -153,7 +153,7 @@ const Earnings = () => {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Earnings</span>
-                  <span className="font-semibold text-green-600">₹{(earnings.earnings?.total || 0).toFixed(2)}</span>
+                  <span className="font-semibold text-green-600">৳{(earnings.earnings?.total || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Total Deliveries</span>
@@ -162,7 +162,7 @@ const Earnings = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Avg per Delivery</span>
                   <span className="font-semibold">
-                    ₹{earnings.deliveries?.total > 0 
+                    ৳{earnings.deliveries?.total > 0 
                       ? ((earnings.earnings?.total || 0) / earnings.deliveries?.total).toFixed(2)
                       : '0.00'}
                   </span>

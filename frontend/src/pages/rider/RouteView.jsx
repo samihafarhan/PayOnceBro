@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import StopList from '../../components/rider/StopList';
 import NavigationButton from '../../components/rider/NavigationButton';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 
 const RouteView = () => {
   const [searchParams] = useSearchParams();
@@ -82,9 +83,9 @@ const RouteView = () => {
   if (!activeClusterId && !error) {
     return (
       <div className="p-8">
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
-          Loading route...
-        </div>
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="py-3 text-blue-700">Loading route...</CardContent>
+        </Card>
       </div>
     );
   }
@@ -93,23 +94,25 @@ const RouteView = () => {
     <div className="p-8 bg-gray-50 min-h-screen">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Route Optimization</h1>
-          <p className="text-gray-600 mt-2">Your optimized pickup and delivery route</p>
-        </div>
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-3xl">Route Optimization</CardTitle>
+            <CardDescription>Your optimized pickup and delivery route</CardDescription>
+          </CardHeader>
+        </Card>
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
-          </div>
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="py-3 text-red-700">{error}</CardContent>
+          </Card>
         )}
 
         {/* Loading State */}
         {loading && (
-          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-6">
-            Optimizing your route...
-          </div>
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="py-3 text-blue-700">Optimizing your route...</CardContent>
+          </Card>
         )}
 
         {/* Route Content */}
@@ -129,15 +132,19 @@ const RouteView = () => {
             />
 
             {/* Route Info Card */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
-              <h3 className="font-semibold text-gray-900 mb-3">Route Tips</h3>
-              <ul className="space-y-2 text-sm text-gray-700">
+            <Card className="border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <CardHeader>
+                <CardTitle className="text-base">Route Tips</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm text-gray-700">
                 <li>✓ Follow the numbered stops in order for the shortest route</li>
                 <li>✓ Pickup all items from each restaurant before moving to the next</li>
                 <li>✓ Deliver the complete order to the customer at the final stop</li>
                 <li>✓ Click "Start Navigation" to open Google Maps</li>
-              </ul>
-            </div>
+                </ul>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>

@@ -1,6 +1,7 @@
 import * as restaurantModel from '../models/restaurantModel.js'
 import * as ratingModel from '../models/ratingModel.js'
 import * as riderModel from '../models/riderModel.js'
+import * as notificationModel from '../models/notificationModel.js'
 
 export const createRestaurantRating = async (req, res, next) => {
   try {
@@ -93,7 +94,7 @@ export const addRestaurantReviewResponse = async (req, res, next) => {
       return res.status(404).json({ message: 'Review not found for your restaurant' })
     }
 
-    res.json({ review: updated })
+    res.json({ review: updated, rating: updated })
   } catch (err) {
     next(err)
   }
@@ -116,33 +117,14 @@ export const getByRestaurant = async (req, res, next) => {
 }
 
 export const addResponse = async (req, res, next) => {
-  try {
-    const { id: ratingId } = req.params
-    const { responseText } = req.body
-
-    if (!responseText || !responseText.trim()) {
-      return res.status(400).json({ message: 'responseText is required' })
-    }
-
-    const restaurant = await restaurantModel.getByOwner(req.user.id)
-    if (!restaurant) {
-      return res.status(404).json({ message: 'No restaurant found for this account' })
-    }
-
-    const updated = await ratingModel.addRestaurantResponse({
-      ratingId,
-      restaurantId: restaurant.id,
-      responseText: responseText.trim(),
-    })
-
-    if (!updated) {
-      return res.status(404).json({ message: 'Review not found for your restaurant' })
-    }
-
-    res.json({ rating: updated })
-  } catch (err) {
-    next(err)
+  const forwardedReq = {
+    ...req,
+    params: {
+      ...req.params,
+      ratingId: req.params.id,
+    },
   }
+  return addRestaurantReviewResponse(forwardedReq, res, next)
 }
 
 // Rider Rating Methods
@@ -167,6 +149,12 @@ export const createRiderRating = async (req, res, next) => {
     }
 
     // Check if user already rated this rider for this order
+    const assignedToOrder = await ratingModel.orderIncludesRider(orderId, riderId)
+    if (!assignedToOrder) {
+      return res.status(400).json({ message: 'This rider was not assigned to your order' })
+    }
+
+    // Check if user already rated this rider for this order
     const existing = await ratingModel.findExistingRiderRating(orderId, req.user.id, riderId)
     if (existing) {
       return res.status(409).json({ message: 'You already rated this rider for this order' })
@@ -185,10 +173,13 @@ export const createRiderRating = async (req, res, next) => {
     const avg = await ratingModel.calculateRiderAverage(riderId)
     await riderModel.updateRating(riderId, avg)
 
-    // Log low rating alert
+    // Persist low rating alert for admins
     if (avg < 3.0) {
       const rider = await riderModel.getById(riderId)
-      console.warn(`⚠️ Rider ${riderId} (user: ${rider?.user_id}) average rating dropped to ${avg.toFixed(1)} stars`)
+      const message = `Rider ${riderId} (user: ${rider?.user_id ?? 'unknown'}) average rating dropped to ${avg.toFixed(1)} stars`
+      notificationModel.createAdminAlert(message, 'rider_rating_alert').catch((notifyErr) => {
+        console.error('[notificationModel] createAdminAlert failed:', notifyErr?.message || notifyErr)
+      })
     }
 
     res.status(201).json({ rating })

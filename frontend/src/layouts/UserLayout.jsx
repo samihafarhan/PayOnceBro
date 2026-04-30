@@ -4,7 +4,6 @@ import TopNavbar from '../components/common/TopNavbar'
 
 const navLinks = [
   { to: '/home', label: '🏠 Home' },
-  { to: '/search', label: '🔍 Search' },
   { to: '/cart', label: '🛒 Cart' },
   { to: '/orders', label: '📦 My Orders' },
 ]

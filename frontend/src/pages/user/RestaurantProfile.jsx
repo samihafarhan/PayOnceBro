@@ -116,10 +116,10 @@ const RestaurantProfile = () => {
           {error || 'Restaurant not found or currently inactive.'}
         </div>
         <Link
-          to="/search"
+          to="/home"
           className="inline-block mt-4 text-sm font-medium text-orange-600 hover:text-orange-700"
         >
-          ← Back to search
+          ← Back to home
         </Link>
       </div>
     )
@@ -130,10 +130,10 @@ const RestaurantProfile = () => {
     <div className="max-w-3xl mx-auto p-4 pb-24">
       {/* Back link */}
       <Link
-        to="/search"
+        to="/home"
         className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-800 mb-4"
       >
-        ← Back to search
+        ← Back to home
       </Link>
 
       {/* Restaurant header */}

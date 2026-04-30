@@ -13,15 +13,6 @@ export const updateLocation = async (lat, lng) => {
 }
 
 /**
- * getLocation — Fetch a specific rider's current location.
- * Used by customers tracking their delivery.
- */
-export const getLocation = async (riderId) => {
-  const { data } = await api.get(`/rider/${riderId}/location`)
-  return data
-}
-
-/**
  * getProfile — Fetch the logged-in rider's full profile.
  * Includes availability status, rating, total deliveries.
  */

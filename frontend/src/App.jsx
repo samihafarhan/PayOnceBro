@@ -14,7 +14,6 @@ import RestaurantReviews from './pages/restaurant/Reviews';
 // User pages (Member A)
 import UserLayout from './layouts/UserLayout';
 import Home from './pages/user/Home';
-import Search from './pages/user/Search';
 import RestaurantProfile from './pages/user/RestaurantProfile';
 import Cart from './pages/user/Cart';
 import Orders from './pages/user/Orders';
@@ -30,6 +29,7 @@ import Analytics from './pages/admin/Analytics';
 
 import { Toaster } from './components/ui/sonner';
 import OrderTracking from './pages/user/OrderTracking';
+import { getRoleHome } from './utils/roleHome';
 
 function App() {
   return (
@@ -55,7 +55,7 @@ function App() {
           <Route element={<ProtectedRoute role="user" />}>
             <Route element={<UserLayout />}>
               <Route path="/home" element={<Home />} />
-              <Route path="/search" element={<Search />} />
+              <Route path="/search" element={<Navigate to="/home" replace />} />
               <Route path="/restaurants/:id" element={<RestaurantProfile />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/orders" element={<Orders />} />
@@ -102,17 +102,7 @@ const SmartRedirect = () => {
       navigate('/auth', { replace: true })
       return
     }
-    const role = user?.role?.trim().toLowerCase()
-
-    if (role === 'restaurant_owner' || role === 'restaurant') {
-      navigate('/restaurant/dashboard', { replace: true })
-    } else if (role === 'rider') {
-      navigate('/rider/dashboard', { replace: true })
-    } else if (role === 'admin') {
-      navigate('/admin/analytics', { replace: true })
-    } else {
-      navigate('/home', { replace: true })
-    }
+    navigate(getRoleHome(user?.role), { replace: true })
   }, [user, loading, isSessionLoaded, navigate])
 
   if (loading || !isSessionLoaded) {

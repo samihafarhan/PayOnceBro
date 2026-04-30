@@ -24,19 +24,6 @@ export const getById = async (clusterId) => {
   return data
 }
 
-export const getByOrder = async (orderId) => {
-  const { data: order, error: orderErr } = await supabase
-    .from('orders')
-    .select('cluster_id')
-    .eq('id', orderId)
-    .single()
-
-  if (orderErr && orderErr.code !== 'PGRST116') throw orderErr
-  if (!order?.cluster_id) return null
-
-  return getById(order.cluster_id)
-}
-
 export const assignRider = async (clusterId, riderId) => {
   const { data, error } = await supabase
     .from('clusters')

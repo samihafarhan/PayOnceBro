@@ -1,5 +1,6 @@
 import supabase from '../config/db.js'
 import * as deliveryFeeService from '../services/deliveryFeeService.js'
+import { estimateDeliveryTime } from '../services/clusteringService.js'
 
 /**
  * POST /api/delivery/fee
@@ -53,6 +54,48 @@ export const calculateFee = async (req, res, next) => {
       Boolean(isCluster)
     )
 
+    res.json(result)
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * POST /api/delivery/eta
+ *
+ * Calculates estimated delivery time for a set of restaurants and user location.
+ *
+ * Body: { restaurantIds: string[], userLat: number, userLng: number }
+ */
+export const estimateTime = async (req, res, next) => {
+  try {
+    const { restaurantIds, userLat, userLng } = req.body
+
+    if (!Array.isArray(restaurantIds) || restaurantIds.length === 0) {
+      return res.status(400).json({ message: 'restaurantIds must be a non-empty array' })
+    }
+    if (userLat == null || userLng == null) {
+      return res.status(400).json({ message: 'userLat and userLng are required' })
+    }
+
+    const { data: restaurants, error } = await supabase
+      .from('restaurants')
+      .select('id, name, lat, lng, avg_prep_time')
+      .in('id', restaurantIds)
+
+    if (error) throw error
+
+    if (!restaurants || restaurants.length === 0) {
+      return res.status(404).json({ message: 'No restaurants found for the given IDs' })
+    }
+
+    if (restaurants.length !== restaurantIds.length) {
+      const foundIds = new Set(restaurants.map((r) => String(r.id)))
+      const missingIds = restaurantIds.filter((id) => !foundIds.has(String(id)))
+      return res.status(400).json({ message: 'Some restaurants were not found', missingIds })
+    }
+
+    const result = estimateDeliveryTime(restaurants, parseFloat(userLat), parseFloat(userLng))
     res.json(result)
   } catch (err) {
     next(err)

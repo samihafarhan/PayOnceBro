@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
+import { Input } from '../ui/input'
+import { Button } from '../ui/button'
+import { Card } from '../ui/card'
 
 /**
  * SearchBar.jsx
@@ -49,6 +52,7 @@ const SearchBar = ({ onSearch, categories = [], loading = false }) => {
 
     return () => clearTimeout(debounceRef.current)
   }, [query, minPrice, maxPrice, cuisine, location, onSearch])
+  // NOTE: parent should memoize onSearch with useCallback to preserve debounce behavior.
 
   // Ask the browser for the user's GPS location
   const requestLocation = () => {
@@ -74,37 +78,36 @@ const SearchBar = ({ onSearch, categories = [], loading = false }) => {
       <div className="flex gap-2">
         {/* Search input */}
         <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg select-none">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-lg select-none">
             🔍
           </span>
-          <input
+          <Input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search for food... (e.g. burger, pasta, rice)"
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white shadow-sm text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all"
+            className="w-full pl-10 pr-10 h-11 bg-card"
           />
           {loading && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin text-lg">
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground animate-spin text-lg">
               ⏳
             </span>
           )}
         </div>
 
         {/* Filters toggle button */}
-        <button
+        <Button
+          type="button"
+          variant={showFilters || hasActiveFilters ? 'default' : 'outline'}
           onClick={() => setShowFilters((v) => !v)}
-          className={`px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
-            showFilters || hasActiveFilters
-              ? 'bg-orange-500 text-white border-orange-500 shadow-sm shadow-orange-200'
-              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-          }`}
+          className="h-11"
         >
           🎛️ Filter{hasActiveFilters ? ' •' : ''}
-        </button>
+        </Button>
 
         {/* Location button */}
-        <button
+        <Button
+          type="button"
           onClick={requestLocation}
           disabled={locationStatus === 'loading'}
           title={
@@ -112,12 +115,13 @@ const SearchBar = ({ onSearch, categories = [], loading = false }) => {
               ? 'Location active — nearby restaurants shown first'
               : 'Click to show nearby restaurants first'
           }
-          className={`px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+          variant="outline"
+          className={`h-11 ${
             locationStatus === 'granted'
-              ? 'bg-emerald-500 text-white border-emerald-500'
+              ? 'bg-primary text-primary-foreground border-primary'
               : locationStatus === 'denied'
-              ? 'bg-red-50 text-red-500 border-red-200'
-              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+              ? 'bg-destructive/10 text-destructive border-destructive/20'
+              : 'text-muted-foreground'
           }`}
         >
           {locationStatus === 'loading'
@@ -127,51 +131,51 @@ const SearchBar = ({ onSearch, categories = [], loading = false }) => {
             : locationStatus === 'denied'
             ? '🚫'
             : '📍?'}
-        </button>
+        </Button>
       </div>
 
       {/* Expandable filter panel */}
       {showFilters && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in slide-in-from-top-2 duration-200">
+        <Card className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in slide-in-from-top-2 duration-200 bg-card">
           {/* Min price */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
               Min Price (৳)
             </label>
-            <input
+            <Input
               type="number"
               value={minPrice}
               onChange={(e) => setMinPrice(e.target.value)}
               placeholder="0"
               min="0"
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+              className="w-full"
             />
           </div>
 
           {/* Max price */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
               Max Price (৳)
             </label>
-            <input
+            <Input
               type="number"
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
               placeholder="Any"
               min="0"
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+              className="w-full"
             />
           </div>
 
           {/* Cuisine / category */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
               Cuisine Type
             </label>
             <select
               value={cuisine}
               onChange={(e) => setCuisine(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="">All cuisines</option>
               {categories.map((cat) => (
@@ -185,24 +189,26 @@ const SearchBar = ({ onSearch, categories = [], loading = false }) => {
           {/* Clear filters button */}
           {hasActiveFilters && (
             <div className="sm:col-span-3 flex justify-end">
-              <button
+              <Button
+                type="button"
+                variant="link"
                 onClick={() => {
                   setMinPrice('')
                   setMaxPrice('')
                   setCuisine('')
                 }}
-                className="text-xs text-gray-500 hover:text-red-500 underline transition-colors"
+                className="text-xs text-muted-foreground hover:text-destructive"
               >
                 Clear all filters
-              </button>
+              </Button>
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Location tip */}
       {locationStatus === 'granted' && (
-        <p className="text-xs text-emerald-600 flex items-center gap-1">
+        <p className="text-xs text-primary flex items-center gap-1">
           <span>✅</span> Location active — nearby restaurants shown first and cluster savings highlighted
         </p>
       )}
