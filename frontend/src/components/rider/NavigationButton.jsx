@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '../ui/button';
 
 /**
  * NavigationButton — Button to open Google Maps navigation
@@ -15,14 +16,11 @@ const NavigationButton = ({ mapsUrl = '', totalDistance = 0 }) => {
   };
 
   return (
-    <button
+    <Button
       onClick={handleNavigate}
       disabled={!mapsUrl}
-      className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-all ${
-        mapsUrl
-          ? 'bg-blue-500 hover:bg-blue-600 cursor-pointer'
-          : 'bg-gray-400 cursor-not-allowed opacity-50'
-      }`}
+      size="lg"
+      className="w-full"
     >
       <span className="flex items-center justify-center gap-2">
         <span>🗺️</span>
@@ -31,7 +29,7 @@ const NavigationButton = ({ mapsUrl = '', totalDistance = 0 }) => {
           <span className="text-sm">({totalDistance.toFixed(1)} km)</span>
         )}
       </span>
-    </button>
+    </Button>
   );
 };
 

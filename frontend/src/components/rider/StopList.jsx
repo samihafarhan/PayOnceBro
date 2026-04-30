@@ -1,4 +1,8 @@
 import React from 'react';
+import { Badge } from '../ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Separator } from '../ui/separator';
+import { Skeleton } from '../ui/skeleton';
 
 /**
  * StopList — Displays ordered stops for route optimization
@@ -11,32 +15,37 @@ import React from 'react';
 const StopList = ({ stops = [], totalDistance = 0, isLoading = false }) => {
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="animate-pulse space-y-4">
+      <Card>
+        <CardContent className="space-y-4">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-16 bg-gray-200 rounded" />
+            <Skeleton key={i} className="h-16 rounded-md" />
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (stops.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6 text-center py-12">
-        <p className="text-gray-400">No stops found for this route</p>
-      </div>
+      <Card>
+        <CardContent className="py-12 text-center text-muted-foreground">
+          No stops found for this route
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Pickup Route</h2>
-        <p className="text-sm text-gray-600">Total Distance: <span className="font-bold">{totalDistance.toFixed(2)} km</span></p>
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Pickup Route</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Total Distance: <span className="font-bold text-foreground">{totalDistance.toFixed(2)} km</span>
+        </p>
+      </CardHeader>
 
-      <div className="space-y-3">
+      <CardContent>
+        <div className="space-y-3">
         {stops.map((stop, index) => {
           const isRestaurant = stop.type === 'restaurant';
           const isCustomer = stop.type === 'customer';
@@ -52,12 +61,14 @@ const StopList = ({ stops = [], totalDistance = 0, isLoading = false }) => {
                 <p className="font-medium text-gray-900">
                   {stop.name}
                 </p>
-                <p className="text-sm text-gray-600 mt-1">
-                  {isRestaurant && '📍 Restaurant'}
-                  {isCustomer && '🏠 Customer Delivery'}
-                </p>
+                <div className="mt-1">
+                  <Badge variant={isCustomer ? 'secondary' : 'outline'}>
+                    {isRestaurant && 'Restaurant'}
+                    {isCustomer && 'Customer Delivery'}
+                  </Badge>
+                </div>
                 {index < stops.length - 1 && (
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Distance to next: <span className="font-semibold">{stop.distanceFromPrev?.toFixed(2) || 0} km</span>
                   </p>
                 )}
@@ -70,32 +81,34 @@ const StopList = ({ stops = [], totalDistance = 0, isLoading = false }) => {
             </div>
           );
         })}
-      </div>
+        </div>
 
       {/* Route summary */}
-      <div className="mt-6 pt-4 border-t border-gray-200">
+      <Separator className="my-6" />
+      <div>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <p className="text-xs text-gray-600">Restaurants</p>
-            <p className="text-lg font-bold text-gray-900">
+            <p className="text-xs text-muted-foreground">Restaurants</p>
+            <p className="text-lg font-bold text-foreground">
               {stops.filter(s => s.type === 'restaurant').length}
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-600">Total Distance</p>
-            <p className="text-lg font-bold text-gray-900">
+            <p className="text-xs text-muted-foreground">Total Distance</p>
+            <p className="text-lg font-bold text-foreground">
               {totalDistance.toFixed(2)} km
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-600">Est. Time</p>
-            <p className="text-lg font-bold text-gray-900">
+            <p className="text-xs text-muted-foreground">Est. Time</p>
+            <p className="text-lg font-bold text-foreground">
               {Math.ceil((totalDistance / 30) * 60)} min
             </p>
           </div>
         </div>
       </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

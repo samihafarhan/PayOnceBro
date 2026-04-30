@@ -1,24 +1,29 @@
 import ReviewResponseForm from './ReviewResponseForm'
+import { Badge } from '../ui/badge'
+import { Card, CardContent } from '../ui/card'
 
 const renderStars = (score) => '★'.repeat(score) + '☆'.repeat(5 - score)
 
 const ReviewList = ({ reviews, respondingId, onRespond }) => {
   if (!reviews || reviews.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500 text-sm">
-        No reviews yet.
-      </div>
+      <Card>
+        <CardContent className="p-8 text-center text-muted-foreground text-sm">
+          No reviews yet.
+        </CardContent>
+      </Card>
     )
   }
 
   return (
     <div className="space-y-4">
       {reviews.map((review) => (
-        <article key={review.id} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <Card key={review.id}>
+          <CardContent className="p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-gray-800">{review.reviewer_name || 'Customer'}</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm font-semibold text-foreground">{review.reviewer_name || 'Customer'}</p>
+              <p className="text-xs text-muted-foreground">
                 {review.created_at ? new Date(review.created_at).toLocaleString() : 'Unknown date'}
               </p>
             </div>
@@ -35,7 +40,7 @@ const ReviewList = ({ reviews, respondingId, onRespond }) => {
 
           {review.restaurant_response ? (
             <div className="mt-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
-              <p className="text-xs font-semibold text-orange-700">Your response</p>
+              <Badge variant="outline" className="border-orange-300 text-orange-700">Your response</Badge>
               <p className="text-sm text-orange-900 mt-1">{review.restaurant_response}</p>
             </div>
           ) : (
@@ -44,7 +49,8 @@ const ReviewList = ({ reviews, respondingId, onRespond }) => {
               onSubmit={(responseText) => onRespond(review.id, responseText)}
             />
           )}
-        </article>
+          </CardContent>
+        </Card>
       ))}
     </div>
   )

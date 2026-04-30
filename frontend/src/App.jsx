@@ -14,7 +14,6 @@ import RestaurantReviews from './pages/restaurant/Reviews';
 // User pages (Member A)
 import UserLayout from './layouts/UserLayout';
 import Home from './pages/user/Home';
-import Search from './pages/user/Search';
 import RestaurantProfile from './pages/user/RestaurantProfile';
 import Cart from './pages/user/Cart';
 import Orders from './pages/user/Orders';
@@ -56,7 +55,7 @@ function App() {
           <Route element={<ProtectedRoute role="user" />}>
             <Route element={<UserLayout />}>
               <Route path="/home" element={<Home />} />
-              <Route path="/search" element={<Search />} />
+              <Route path="/search" element={<Navigate to="/home" replace />} />
               <Route path="/restaurants/:id" element={<RestaurantProfile />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/orders" element={<Orders />} />

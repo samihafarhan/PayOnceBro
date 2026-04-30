@@ -2,12 +2,58 @@
 import { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react'
 import { checkCluster, getDeliveryFee } from '../services/deliveryService'
 
+const CART_SESSION_KEY = 'payoncebro_cart_session_v1'
+
 const INITIAL_CLUSTER = {
   checked: false, eligible: false, reason: null,
   centroid: null, maxDistanceKm: null, deliveryFee: null, eta: null,
 }
 const INITIAL_STATE = {
   items: [], clusterStatus: INITIAL_CLUSTER, userLocation: null, checkingCluster: false,
+}
+
+const loadInitialCartState = () => {
+  if (typeof window === 'undefined') return INITIAL_STATE
+
+  try {
+    const raw = window.sessionStorage.getItem(CART_SESSION_KEY)
+    if (!raw) return INITIAL_STATE
+
+    const parsed = JSON.parse(raw)
+    const toValidId = (value) => {
+      if (typeof value === 'string' && value.trim()) return value
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+      return null
+    }
+
+    const items = Array.isArray(parsed?.items)
+      ? parsed.items
+          .map((item) => ({
+            menuItemId: toValidId(item?.menuItemId),
+            name: typeof item?.name === 'string' ? item.name : '',
+            price: Number(item?.price),
+            restaurantId: toValidId(item?.restaurantId),
+            restaurantName: typeof item?.restaurantName === 'string' ? item.restaurantName : '',
+            quantity: Number(item?.quantity),
+          }))
+          .filter((item) =>
+            item.menuItemId !== null &&
+            item.restaurantId !== null &&
+            Number.isFinite(item.price) &&
+            Number.isFinite(item.quantity) &&
+            item.quantity > 0 &&
+            item.name &&
+            item.restaurantName
+          )
+      : []
+    const lat = Number(parsed?.userLocation?.lat)
+    const lng = Number(parsed?.userLocation?.lng)
+    const userLocation = Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null
+
+    return { ...INITIAL_STATE, items, userLocation }
+  } catch {
+    return INITIAL_STATE
+  }
 }
 
 const cartReducer = (state, action) => {
@@ -44,7 +90,7 @@ const cartReducer = (state, action) => {
 const CartContext = createContext(null)
 
 export const CartProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(cartReducer, INITIAL_STATE)
+  const [state, dispatch] = useReducer(cartReducer, INITIAL_STATE, loadInitialCartState)
   const debounceTimer = useRef(null)
 
   const subtotal      = state.items.reduce((s, i) => s + i.price * i.quantity, 0)
@@ -130,6 +176,21 @@ export const CartProvider = ({ children }) => {
     debounceTimer.current = setTimeout(() => runClusterCheck(state.items, state.userLocation), 600)
     return () => clearTimeout(debounceTimer.current)
   }, [state.items, state.userLocation, runClusterCheck])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.sessionStorage.setItem(
+        CART_SESSION_KEY,
+        JSON.stringify({
+          items: state.items,
+          userLocation: state.userLocation,
+        })
+      )
+    } catch {
+      // Ignore storage quota/access errors and keep in-memory cart working.
+    }
+  }, [state.items, state.userLocation])
 
   const addItem = (menuItem, restaurant) =>
     dispatch({ type: 'ADD_ITEM', payload: { menuItemId: menuItem.id, name: menuItem.name, price: menuItem.price, restaurantId: restaurant.id, restaurantName: restaurant.name } })

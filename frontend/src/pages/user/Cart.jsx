@@ -155,9 +155,9 @@ const Cart = () => {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
         <span className="text-6xl">🛒</span>
         <h2 className="text-2xl font-black text-foreground">Your cart is empty</h2>
-        <p className="text-muted-foreground text-sm">Add food from the search page to get started.</p>
+        <p className="text-muted-foreground text-sm">Add food from the home page to get started.</p>
         <Button asChild className="mt-2">
-          <Link to="/search">Browse Food</Link>
+          <Link to="/home">Browse Food</Link>
         </Button>
       </div>
     )
