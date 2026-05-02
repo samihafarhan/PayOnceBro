@@ -1,7 +1,12 @@
 import * as restaurantModel from '../models/restaurantModel.js'
 import * as menuModel from '../models/menuModel.js'
+import * as ratingModel from '../models/ratingModel.js'
 import { findBestRider } from '../services/riderAssignmentService.js'
-import { generateMenuTags } from '../services/geminiService.js'
+import { generateMenuTags, generateVibeSummary } from '../services/geminiService.js'
+import { startSimulatedOrderFlow } from '../services/orderSimulationService.js'
+
+const VIBE_CACHE_TTL_MS = 60 * 60 * 1000
+const vibeCache = new Map()
 
 const inferFallbackTags = (name = '', description = '') => {
   const text = `${name} ${description}`.toLowerCase()
@@ -205,6 +210,7 @@ export const updateOrderStatus = async (req, res, next) => {
       } catch (assignErr) {
         console.error(`❌ Rider assignment failed for order ${orderId}:`, assignErr?.message || assignErr)
       }
+        startSimulatedOrderFlow(orderId, req.user.id)
     }
 
     res.json({ order: updated })
@@ -474,6 +480,43 @@ export const updateSettings = async (req, res, next) => {
 
     const updated = await restaurantModel.updateRestaurantSettings(restaurant.id, settings)
     res.json({ restaurant: updated })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * GET /api/restaurants/:id/vibe
+ * Public endpoint for a short, cached summary of recent reviews.
+ */
+export const getVibeSummary = async (req, res, next) => {
+  try {
+    const { id: restaurantId } = req.params
+    if (!restaurantId) {
+      return res.status(400).json({ message: 'Restaurant id is required' })
+    }
+
+    const cached = vibeCache.get(restaurantId)
+    if (cached && cached.expiresAt > Date.now()) {
+      return res.json({ summary: cached.summary })
+    }
+
+    const reviews = await ratingModel.getRecentRestaurantReviews(restaurantId, 20)
+    if (reviews.length < 3) {
+      vibeCache.set(restaurantId, {
+        summary: null,
+        expiresAt: Date.now() + VIBE_CACHE_TTL_MS,
+      })
+      return res.json({ summary: null })
+    }
+
+    const summary = await generateVibeSummary(reviews)
+    vibeCache.set(restaurantId, {
+      summary: summary || null,
+      expiresAt: Date.now() + VIBE_CACHE_TTL_MS,
+    })
+
+    res.json({ summary: summary || null })
   } catch (err) {
     next(err)
   }

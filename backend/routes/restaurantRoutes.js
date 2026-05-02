@@ -10,6 +10,7 @@ import {
   updateSettings,
   getProfile,
   updateProfile,
+  getVibeSummary,
 } from '../controllers/restaurantController.js'
 import {
   createRestaurantRating,
@@ -40,6 +41,9 @@ router.put('/settings', protect, restrictTo('restaurant_owner'), updateSettings)
 // Public profile
 router.get('/profile', protect, restrictTo('restaurant_owner'), getProfile)
 router.put('/profile', protect, restrictTo('restaurant_owner'), updateProfile)
+
+// Public vibe summary
+router.get('/:id/vibe', getVibeSummary)
 
 // Reviews / ratings (Member C)
 router.post('/reviews', protect, restrictTo('user'), createRestaurantRating)

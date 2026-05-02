@@ -89,13 +89,19 @@ export const generateMenuTags = async (name, description) => {
 }
 
 export const generateVibeSummary = async (reviews) => {
-  if (!model) return null
+  if (!model) {
+    console.warn('Gemini model not initialized for vibe summary.')
+    return null
+  }
 
   try {
     const prompt = `Summarize these restaurant reviews in ONE sentence of 20 words or less.\nBe specific and honest. Tell a new customer what to expect.\nReviews: ${JSON.stringify((reviews || []).map((r) => r.review_text))}`
     const result = await withTimeout(model.generateContent(prompt))
-    return result.response.text().trim()
-  } catch {
+    const text = result.response.text().trim()
+    console.log('Gemini vibe summary response:', text.slice(0, 200))
+    return text
+  } catch (err) {
+    console.error('Gemini vibe summary failed:', err?.message || err)
     return null
   }
 }

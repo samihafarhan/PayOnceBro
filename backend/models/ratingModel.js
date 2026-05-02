@@ -91,6 +91,19 @@ export const listRestaurantReviews = async (restaurantId) => {
   }))
 }
 
+export const getRecentRestaurantReviews = async (restaurantId, limit = 20) => {
+  const { data, error } = await supabase
+    .from('ratings')
+    .select('id, review_text, created_at')
+    .eq('restaurant_id', restaurantId)
+    .not('review_text', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+  return data ?? []
+}
+
 export const addRestaurantResponse = async ({ ratingId, restaurantId, responseText }) => {
   const { data, error } = await supabase
     .from('ratings')

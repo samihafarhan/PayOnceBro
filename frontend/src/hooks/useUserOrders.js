@@ -54,6 +54,17 @@ const useUserOrders = () => {
     }
   }, [refresh])
 
+  // Poll as a fallback in case realtime events are missed.
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        refresh()
+      }
+    }, 4000)
+
+    return () => clearInterval(intervalId)
+  }, [refresh])
+
   return { data, loading, error, refresh }
 }
 

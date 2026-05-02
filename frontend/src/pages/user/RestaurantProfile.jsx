@@ -19,9 +19,11 @@ import { Link, useParams } from 'react-router-dom'
 import {
   getPublicRestaurant,
   getPublicRestaurantReviews,
+  getVibeSummary,
 } from '../../services/publicRestaurantService'
 import RestaurantMenuList from '../../components/user/RestaurantMenuList'
 import RestaurantReviewsList from '../../components/user/RestaurantReviewsList'
+import VibeCheckCard from '../../components/user/VibeCheckCard'
 import { useCart } from '../../context/CartContext'
 import { toast } from 'sonner'
 
@@ -45,8 +47,10 @@ const RestaurantProfile = () => {
   const [reviews, setReviews] = useState([])
   const [loadingProfile, setLoadingProfile] = useState(true)
   const [loadingReviews, setLoadingReviews] = useState(true)
+  const [loadingVibe, setLoadingVibe] = useState(true)
   const [error, setError] = useState(null)
   const [tab, setTab] = useState('menu') // 'menu' | 'reviews'
+  const [vibeSummary, setVibeSummary] = useState(null)
 
   // Fetch profile + menu
   useEffect(() => {
@@ -72,6 +76,27 @@ const RestaurantProfile = () => {
       }
     }
     loadProfile()
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  // Fetch vibe summary (best-effort)
+  useEffect(() => {
+    let cancelled = false
+    const loadVibe = async () => {
+      setLoadingVibe(true)
+      try {
+        const data = await getVibeSummary(id)
+        if (!cancelled) setVibeSummary(data?.summary ?? null)
+      } catch {
+        if (!cancelled) setVibeSummary(null)
+      } finally {
+        if (!cancelled) setLoadingVibe(false)
+      }
+    }
+
+    loadVibe()
     return () => {
       cancelled = true
     }
@@ -209,6 +234,10 @@ const RestaurantProfile = () => {
             {t.label}
           </button>
         ))}
+      </div>
+
+      <div className="mb-4">
+        <VibeCheckCard summary={vibeSummary} loading={loadingVibe} />
       </div>
 
       {/* Tab content */}
