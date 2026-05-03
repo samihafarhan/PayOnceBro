@@ -43,3 +43,14 @@ export const getPublicRestaurantReviews = async (restaurantId) => {
     return []
   }
 }
+
+/**
+ * Fetch Gemini vibe summary for a restaurant.
+ *
+ * @param {string} restaurantId
+ * @returns {Promise<{ summary: string | null }>} summary payload
+ */
+export const getVibeSummary = async (restaurantId) => {
+  const { data } = await api.get(`/restaurants/${restaurantId}/vibe`)
+  return data
+}
