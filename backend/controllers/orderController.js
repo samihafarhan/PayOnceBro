@@ -7,6 +7,7 @@ import * as deliveryFeeService from '../services/deliveryFeeService.js'
 import { estimateDeliveryTime } from '../services/clusteringService.js'
 import { findBestRider } from '../services/riderAssignmentService.js'
 import supabase from '../config/db.js'
+import { startSimulatedOrderFlow } from '../services/orderSimulationService.js'
 
 const RESTAURANT_ALLOWED = {
   pending: ['accepted', 'cancelled'],
@@ -270,6 +271,8 @@ export const updateStatus = async (req, res, next) => {
       } catch (assignErr) {
         console.error(`❌ Rider assignment failed for order ${orderId}:`, assignErr?.message || assignErr)
       }
+
+      startSimulatedOrderFlow(orderId, req.user.id)
     }
 
     if (status === 'delivered' && role === 'rider') {

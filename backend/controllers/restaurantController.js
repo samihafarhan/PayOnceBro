@@ -1,58 +1,15 @@
 import * as restaurantModel from '../models/restaurantModel.js'
 import * as menuModel from '../models/menuModel.js'
+import * as ratingModel from '../models/ratingModel.js'
 import { findBestRider } from '../services/riderAssignmentService.js'
 import { generateMenuTags } from '../services/geminiService.js'
 import supabase from '../config/db.js'
+import { generateVibeSummary } from '../services/geminiService.js'
+import { buildMenuTags } from '../services/menuTaggingService.js'
+import { startSimulatedOrderFlow } from '../services/orderSimulationService.js'
 
-const inferFallbackTags = (name = '', description = '') => {
-  const text = `${name} ${description}`.toLowerCase()
-  const tags = new Set()
-  const hasMeat = /\b(beef|chicken|mutton|lamb|prawn|shrimp|fish|tuna|salmon)\b/.test(text)
-
-  if (/\bvegan\b|tofu|plant\s*-?\s*based/.test(text)) tags.add('vegan')
-  // Do not mark vegetarian when the same text clearly mentions meat.
-  if ((/\bvegetarian\b|paneer|veggie/.test(text) || (/vegetable/.test(text) && !hasMeat)) && !hasMeat) {
-    tags.add('vegetarian')
-  }
-  if (/\bhalal\b|beef|chicken|mutton|lamb/.test(text)) tags.add('halal')
-  if (/spicy|chili|chilli|hot\b|jalapeno|pepper/.test(text)) tags.add('spicy')
-  if (/\bmild\b|lightly\s+spiced|butter/.test(text)) tags.add('mild')
-  if (/sweet|dessert|cake|chocolate|honey|sugar/.test(text)) tags.add('sweet')
-  if (/gluten\s*-?\s*free|\bgf\b/.test(text)) tags.add('gluten-free')
-  if (/dairy\s*-?\s*free|lactose\s*-?\s*free/.test(text) || tags.has('vegan')) tags.add('dairy-free')
-  if (/high\s*-?\s*protein|protein\b|beef|chicken|egg/.test(text)) tags.add('high-protein')
-  if (/low\s*-?\s*calorie|salad|steamed|grilled/.test(text)) tags.add('low-calorie')
-
-  return Array.from(tags)
-}
-
-const getMenuTags = async (name = '', description = '') => {
-  const fallback = inferFallbackTags(name, description)
-  // #region agent log
-  fetch('http://127.0.0.1:7418/ingest/e23e83d9-a344-4b52-b5e9-54a81aa66b54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'27b7b0'},body:JSON.stringify({sessionId:'27b7b0',runId:'pre-fix',hypothesisId:'H3',location:'backend/controllers/restaurantController.js:getMenuTags:entry',message:'Tag generation started with fallback precomputed',data:{nameLength:name.length,descriptionLength:description.length,fallbackTags:fallback,fallbackCount:fallback.length},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-
-  try {
-    const aiTags = await generateMenuTags(name, description)
-    // #region agent log
-    fetch('http://127.0.0.1:7418/ingest/e23e83d9-a344-4b52-b5e9-54a81aa66b54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'27b7b0'},body:JSON.stringify({sessionId:'27b7b0',runId:'pre-fix',hypothesisId:'H3',location:'backend/controllers/restaurantController.js:getMenuTags:afterAi',message:'AI tags returned from Gemini service',data:{aiTags:Array.isArray(aiTags)?aiTags:[],aiTagCount:Array.isArray(aiTags)?aiTags.length:0},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    if (Array.isArray(aiTags) && aiTags.length > 0) {
-      const merged = [...new Set([...aiTags, ...fallback])]
-      // #region agent log
-      fetch('http://127.0.0.1:7418/ingest/e23e83d9-a344-4b52-b5e9-54a81aa66b54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'27b7b0'},body:JSON.stringify({sessionId:'27b7b0',runId:'pre-fix',hypothesisId:'H3',location:'backend/controllers/restaurantController.js:getMenuTags:merged',message:'Merged AI and fallback tags',data:{mergedTags:merged,mergedCount:merged.length},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
-      return merged
-    }
-  } catch {
-    // Fallback below
-  }
-
-  // #region agent log
-  fetch('http://127.0.0.1:7418/ingest/e23e83d9-a344-4b52-b5e9-54a81aa66b54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'27b7b0'},body:JSON.stringify({sessionId:'27b7b0',runId:'pre-fix',hypothesisId:'H4',location:'backend/controllers/restaurantController.js:getMenuTags:fallbackOnly',message:'Using fallback tags only',data:{fallbackTags:fallback,fallbackCount:fallback.length},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-  return fallback
-}
+const VIBE_CACHE_TTL_MS = 60 * 60 * 1000
+const vibeCache = new Map()
 
 const getDefaultRestaurantName = (email) => {
   const fallback = 'My Restaurant'
@@ -245,6 +202,7 @@ export const updateOrderStatus = async (req, res, next) => {
       } catch (assignErr) {
         console.error(`❌ Rider assignment failed for order ${orderId}:`, assignErr?.message || assignErr)
       }
+        startSimulatedOrderFlow(orderId, req.user.id)
     }
 
     res.json({ order: updated })
@@ -304,11 +262,8 @@ export const addMenuItem = async (req, res, next) => {
 
     let taggedItem = item
     try {
-      const tags = await getMenuTags(item.name, item.description)
+      const tags = await buildMenuTags(item.name, item.description)
       taggedItem = await menuModel.updateTags(item.id, tags)
-      // #region agent log
-      fetch('http://127.0.0.1:7418/ingest/e23e83d9-a344-4b52-b5e9-54a81aa66b54',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'27b7b0'},body:JSON.stringify({sessionId:'27b7b0',runId:'pre-fix',hypothesisId:'H5',location:'backend/controllers/restaurantController.js:addMenuItem:dbWrite',message:'Tags written to menu item',data:{itemId:item.id,savedTags:Array.isArray(taggedItem?.ai_tags)?taggedItem.ai_tags:[],savedTagCount:Array.isArray(taggedItem?.ai_tags)?taggedItem.ai_tags.length:0},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
     } catch {
       // Menu write should still succeed even if AI tagging fails.
     }
@@ -345,7 +300,7 @@ export const editMenuItem = async (req, res, next) => {
 
     let taggedItem = item
     try {
-      const tags = await getMenuTags(item.name, item.description)
+      const tags = await buildMenuTags(item.name, item.description)
       taggedItem = await menuModel.updateTags(item.id, tags)
     } catch {
       // Keep successful menu updates even if Gemini is unavailable.
@@ -514,6 +469,43 @@ export const updateSettings = async (req, res, next) => {
 
     const updated = await restaurantModel.updateRestaurantSettings(restaurant.id, settings)
     res.json({ restaurant: updated })
+  } catch (err) {
+    next(err)
+  }
+}
+
+/**
+ * GET /api/restaurants/:id/vibe
+ * Public endpoint for a short, cached summary of recent reviews.
+ */
+export const getVibeSummary = async (req, res, next) => {
+  try {
+    const { id: restaurantId } = req.params
+    if (!restaurantId) {
+      return res.status(400).json({ message: 'Restaurant id is required' })
+    }
+
+    const cached = vibeCache.get(restaurantId)
+    if (cached && cached.expiresAt > Date.now()) {
+      return res.json({ summary: cached.summary })
+    }
+
+    const reviews = await ratingModel.getRecentRestaurantReviews(restaurantId, 20)
+    if (reviews.length < 3) {
+      vibeCache.set(restaurantId, {
+        summary: null,
+        expiresAt: Date.now() + VIBE_CACHE_TTL_MS,
+      })
+      return res.json({ summary: null })
+    }
+
+    const summary = await generateVibeSummary(reviews)
+    vibeCache.set(restaurantId, {
+      summary: summary || null,
+      expiresAt: Date.now() + VIBE_CACHE_TTL_MS,
+    })
+
+    res.json({ summary: summary || null })
   } catch (err) {
     next(err)
   }
