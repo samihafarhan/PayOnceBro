@@ -16,6 +16,8 @@ import ratingRoutes from './routes/ratingRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import publicRestaurantRoutes from './routes/publicRestaurantRoutes.js';
 import orderTrackingRoutes    from './routes/orderTrackingRoutes.js';
+import recommendationRoutes from './routes/recommendationRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 
 const app = express();
 
@@ -60,6 +62,8 @@ app.use('/api/ratings',     ratingRoutes);
 app.use('/api/admin',       adminRoutes);
 app.use('/api/public/restaurants', publicRestaurantRoutes);
 app.use('/api/order-tracking',     orderTrackingRoutes);
+app.use('/api/recommendations',    recommendationRoutes);
+app.use('/api/ai',                 aiRoutes);
 app.use(errorHandler);
 
 export default app;

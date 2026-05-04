@@ -49,6 +49,12 @@ export async function getCurrentUser() {
   }
 }
 
+/** Persists delivery coords from the location picker (customer profiles only). */
+export async function updateSavedDeliveryLocation({ lat, lng }) {
+  const { data } = await api.patch('/auth/me/delivery-location', { lat, lng })
+  return data
+}
+
 export async function logout() {
   try {
     await api.post('/auth/logout')
