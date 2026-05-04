@@ -78,8 +78,8 @@ const OrderTracking = () => {
     (sum, i) => sum + Number(i.priceAtOrder || 0) * Number(i.quantity || 0),
     0
   )
-  const deliveryFee = Number(order.delivery_fee || 0)
-  const total = Number(order.total_price || subtotal + deliveryFee)
+  const deliveryFee = Number(order?.delivery_fee || 0)
+  const total = Number(order?.total_price || subtotal + deliveryFee)
 
   useEffect(() => {
     if (orderStatus !== 'delivered' || hasAutoPrompted) return
