@@ -2,6 +2,8 @@ import * as restaurantModel from '../models/restaurantModel.js'
 import * as menuModel from '../models/menuModel.js'
 import * as ratingModel from '../models/ratingModel.js'
 import { findBestRider } from '../services/riderAssignmentService.js'
+import { generateMenuTags } from '../services/geminiService.js'
+import supabase from '../config/db.js'
 import { generateVibeSummary } from '../services/geminiService.js'
 import { buildMenuTags } from '../services/menuTaggingService.js'
 import { startSimulatedOrderFlow } from '../services/orderSimulationService.js'
@@ -103,11 +105,50 @@ export const getOrders = async (req, res, next) => {
       return acc
     }, {})
 
+    const riderIds = [...new Set(allOrders.map((o) => o.rider_id).filter(Boolean))]
+    let riderMap = {}
+
+    if (riderIds.length > 0) {
+      const { data: riders, error: riderErr } = await supabase
+        .from('riders')
+        .select('id, user_id, avg_rating')
+        .in('id', riderIds)
+
+      if (riderErr) throw riderErr
+
+      const userIds = [...new Set((riders ?? []).map((r) => r.user_id).filter(Boolean))]
+      let profileMap = {}
+
+      if (userIds.length > 0) {
+        const { data: profiles, error: profileErr } = await supabase
+          .from('profiles')
+          .select('id, full_name, username')
+          .in('id', userIds)
+
+        if (profileErr) throw profileErr
+        profileMap = (profiles ?? []).reduce((acc, p) => {
+          acc[p.id] = p
+          return acc
+        }, {})
+      }
+
+      riderMap = (riders ?? []).reduce((acc, r) => {
+        const profile = profileMap[r.user_id] || {}
+        acc[r.id] = {
+          id: r.id,
+          fullName: profile.full_name || profile.username || 'Rider',
+          avgRating: r.avg_rating ?? 0,
+        }
+        return acc
+      }, {})
+    }
+
     const enriched = allOrders.map((order) => ({
       ...order,
       myItems: itemsByOrder[order.id] ?? [],
       isClusteredOrder: !!order.cluster_id,
       cluster: order.cluster_id ? (clustersMap[order.cluster_id] ?? null) : null,
+      rider: order.rider_id ? riderMap[order.rider_id] ?? null : null,
       // Used by the frontend PrepTimer — starts counting down on 'accepted'
       restaurantPrepTime: restaurant.avg_prep_time ?? 30,
     }))

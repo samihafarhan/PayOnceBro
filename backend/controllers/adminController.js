@@ -1,4 +1,5 @@
 import * as analyticsService from '../services/analyticsService.js'
+import * as demandService from '../services/demandService.js'
 import * as menuModel from '../models/menuModel.js'
 import { buildMenuTags } from '../services/menuTaggingService.js'
 
@@ -11,6 +12,14 @@ export const getAnalytics = async (req, res, next) => {
   }
 }
 
+export const getDemandZones = async (req, res, next) => {
+  try {
+    const zones = demandService.getDemandZones()
+    res.json({ zones, timestamp: new Date().toISOString() })
+  } catch (error) {
+    next(error)
+  }
+}
 const tagsLookEmpty = (aiTags) => {
   if (aiTags == null) return true
   if (Array.isArray(aiTags)) return aiTags.length === 0
