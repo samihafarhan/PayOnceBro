@@ -74,8 +74,13 @@ const cartReducer = (state, action) => {
     }
     case 'CLEAR_CART':
       return { ...INITIAL_STATE, userLocation: state.userLocation }
-    case 'SET_USER_LOCATION':
+    case 'SET_USER_LOCATION': {
+      const { lat, lng } = action.payload
+      if (state.userLocation?.lat === lat && state.userLocation?.lng === lng) {
+        return state
+      }
       return { ...state, userLocation: action.payload }
+    }
     case 'SET_CHECKING_CLUSTER':
       return { ...state, checkingCluster: action.payload }
     case 'SET_CLUSTER_STATUS':

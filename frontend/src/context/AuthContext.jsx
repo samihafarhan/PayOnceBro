@@ -1,16 +1,28 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
-import useFetch from "../hooks/useFetch";
 import { getCurrentUser, logout as apiLogout } from "../services/authService";
 import supabase from "../lib/supabase";
 
 const urlcontext = createContext()
 
 const UrlProvider = ({children}) => {
-    const {data:user, loading, fn:fetchuser} = useFetch(getCurrentUser)
+    const [user, setUser] = useState(null)
+    const [loading, setLoading] = useState(false)
     const [isSessionLoaded, setIsSessionLoaded] = useState(false)
     const didBootstrapRef = useRef(false)
     const isAuthenticated = Boolean(user && (user.aud === "authenticated" || user.email))
+
+    const fetchuser = useCallback(async () => {
+        setLoading(true)
+        try {
+            const data = await getCurrentUser()
+            setUser(data)
+        } catch (error) {
+            console.error('Error fetching user:', error)
+        } finally {
+            setLoading(false)
+        }
+    }, [])
 
     const logout = async () => {
         try {
@@ -22,49 +34,74 @@ const UrlProvider = ({children}) => {
     }
 
     useEffect(() => {
-        let timeoutId
+        let didCancel = false
+
+        // Bootstrap immediately
+        ;(async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession()
+                if (didCancel) return
+
+                if (session && !didBootstrapRef.current) {
+                    didBootstrapRef.current = true
+                    // Optimistically set the user from session metadata so the app can render
+                    // dashboard/auth routes immediately without waiting for the backend.
+                    const sessionUser = session.user
+                    setUser({
+                        ...sessionUser,
+                        role: sessionUser.user_metadata?.role || 'user',
+                        full_name: sessionUser.user_metadata?.full_name || null,
+                        username: sessionUser.user_metadata?.username || null,
+                    })
+                    // Start background fetch for the full profile (delivery coords, etc.)
+                    fetchuser()
+                }
+                setIsSessionLoaded(true)
+            } catch {
+                if (didCancel) return
+                setIsSessionLoaded(true)
+            }
+        })()
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
+                if (didCancel) return
+
                 if (event === 'INITIAL_SESSION') {
-                    setIsSessionLoaded(true)
-                    if (!didBootstrapRef.current) {
+                    if (session && !didBootstrapRef.current) {
                         didBootstrapRef.current = true
-                        // Fetch user once on the initial session event (covers both
-                        // "already logged in on page load" and "not logged in" cases)
+                        const sessionUser = session.user
+                        setUser({
+                            ...sessionUser,
+                            role: sessionUser.user_metadata?.role || 'user',
+                        })
                         fetchuser()
                     }
-                } else if (event === 'SIGNED_IN') {
-                    // SIGNED_IN can follow quickly after initial load; avoid double-fetches.
-                    if (!didBootstrapRef.current) {
-                        didBootstrapRef.current = true
+                    setIsSessionLoaded(true)
+                    return
+                }
+
+                if (event === 'SIGNED_IN') {
+                    if (session) {
+                        const sessionUser = session.user
+                        setUser(prev => prev ? { ...prev, ...sessionUser } : {
+                            ...sessionUser,
+                            role: sessionUser.user_metadata?.role || 'user',
+                        })
                     }
                     fetchuser()
-                } else if (event === 'TOKEN_REFRESHED') {
-                    // Token refresh happens frequently; avoid spamming /auth/me.
-                    // Session is already updated client-side.
-                    if (!session) return
-                } else if (event === 'SIGNED_OUT') {
-                    fetchuser()
+                    return
+                }
+
+                if (event === 'SIGNED_OUT') {
+                    setUser(null)
+                    setIsSessionLoaded(true)
                 }
             }
         )
 
-        // Fallback: in some environments INITIAL_SESSION can be delayed.
-        // Prevent app root from staying blank forever.
-        timeoutId = setTimeout(() => {
-            setIsSessionLoaded((prev) => {
-                if (prev) return prev
-                if (!didBootstrapRef.current) {
-                    didBootstrapRef.current = true
-                    fetchuser()
-                }
-                return true
-            })
-        }, 2500)
-
-        // Do NOT call fetchuser() here — INITIAL_SESSION always fires and handles it
         return () => {
-            clearTimeout(timeoutId)
+            didCancel = true
             subscription.unsubscribe()
         }
     }, [fetchuser])

@@ -104,7 +104,9 @@ const SmartRedirect = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (loading || !isSessionLoaded) return
+    // Only redirect once we have a definitive session state
+    if (!isSessionLoaded || (loading && !user)) return
+    
     if (!user) {
       navigate('/auth', { replace: true })
       return
@@ -112,7 +114,7 @@ const SmartRedirect = () => {
     navigate(getRoleHome(user?.role), { replace: true })
   }, [user, loading, isSessionLoaded, navigate])
 
-  if (loading || !isSessionLoaded) {
+  if (!isSessionLoaded || (loading && !user)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-600">
         <p className="text-sm font-medium">Loading session...</p>
