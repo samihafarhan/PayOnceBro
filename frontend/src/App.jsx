@@ -100,21 +100,21 @@ function App() {
 export default App;
 
 const SmartRedirect = () => {
-  const { user, loading, isSessionLoaded } = UrlState()
+  const { user, loading, authSyncing, isSessionLoaded } = UrlState()
   const navigate = useNavigate()
 
   useEffect(() => {
     // Only redirect once we have a definitive session state
-    if (!isSessionLoaded || (loading && !user)) return
+    if (!isSessionLoaded || authSyncing || (loading && !user)) return
     
     if (!user) {
       navigate('/auth', { replace: true })
       return
     }
     navigate(getRoleHome(user?.role), { replace: true })
-  }, [user, loading, isSessionLoaded, navigate])
+  }, [user, loading, authSyncing, isSessionLoaded, navigate])
 
-  if (!isSessionLoaded || (loading && !user)) {
+  if (!isSessionLoaded || authSyncing || (loading && !user)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-600">
         <p className="text-sm font-medium">Loading session...</p>

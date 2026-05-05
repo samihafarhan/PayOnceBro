@@ -8,22 +8,31 @@ const urlcontext = createContext()
 const UrlProvider = ({children}) => {
     const [user, setUser] = useState(null)
     const [loading, setLoading] = useState(false)
+    const [authSyncing, setAuthSyncing] = useState(false)
     const [isSessionLoaded, setIsSessionLoaded] = useState(false)
     const didBootstrapRef = useRef(false)
     const isFetchingRef = useRef(false)
     const isAuthenticated = Boolean(user && (user.aud === "authenticated" || user.email))
 
-    const fetchuser = useCallback(async () => {
+    const lastFetchedRef = useRef(0)
+
+    const fetchuser = useCallback(async (options = {}) => {
+        const force = typeof options === 'boolean' ? options : Boolean(options?.force)
         if (isFetchingRef.current) return
+        // Cooldown: Don't hammer the API on every tab focus (60s cooldown)
+        if (!force && Date.now() - lastFetchedRef.current < 60000) return
+
         isFetchingRef.current = true
-        setLoading(true)
+        if (force) setAuthSyncing(true)
+        // Only show loading spinner on initial load to prevent UI flickering on tab focus
+        setLoading(prev => !user && prev === false ? true : prev)
+        
         try {
             const data = await getCurrentUser()
-            // Only update state if data actually changed to prevent render loops
+            lastFetchedRef.current = Date.now()
             setUser(prev => {
                 if (!data) return null
                 if (!prev) return data
-                // Shallow check of critical fields to avoid unnecessary re-renders
                 if (prev.id === data.id && 
                     prev.role === data.role && 
                     prev.delivery_lat === data.delivery_lat &&
@@ -36,9 +45,10 @@ const UrlProvider = ({children}) => {
             console.error('Error fetching user:', error)
         } finally {
             setLoading(false)
+            if (force) setAuthSyncing(false)
             isFetchingRef.current = false
         }
-    }, [])
+    }, [user])
 
     const logout = async () => {
         try {
@@ -67,7 +77,7 @@ const UrlProvider = ({children}) => {
                         full_name: sessionUser.user_metadata?.full_name || null,
                         username: sessionUser.user_metadata?.username || null,
                     })
-                    fetchuser()
+                    fetchuser({ force: true })
                 }
                 setIsSessionLoaded(true)
             } catch {
@@ -88,7 +98,7 @@ const UrlProvider = ({children}) => {
                             ...sessionUser,
                             role: sessionUser.user_metadata?.role || 'user',
                         })
-                        fetchuser()
+                        fetchuser({ force: true })
                     }
                     setIsSessionLoaded(true)
                     return
@@ -109,12 +119,18 @@ const UrlProvider = ({children}) => {
                             }
                         })
                     }
-                    fetchuser()
+                    fetchuser({ force: true })
                     return
                 }
 
                 if (event === 'SIGNED_OUT') {
                     setUser(null)
+                    // Reset any cached fetch timing so the next login (possibly different role)
+                    // immediately refreshes the authoritative role from /auth/me.
+                    lastFetchedRef.current = 0
+                    isFetchingRef.current = false
+                    didBootstrapRef.current = false
+                    setAuthSyncing(false)
                     setIsSessionLoaded(true)
                 }
             }
@@ -127,8 +143,14 @@ const UrlProvider = ({children}) => {
     }, [fetchuser])
 
     const value = useMemo(() => ({
-        user, fetchuser, loading, isAuthenticated, isSessionLoaded, logout
-    }), [user, fetchuser, loading, isAuthenticated, isSessionLoaded])
+        user,
+        fetchuser,
+        loading,
+        authSyncing,
+        isAuthenticated,
+        isSessionLoaded,
+        logout,
+    }), [user, fetchuser, loading, authSyncing, isAuthenticated, isSessionLoaded])
 
     return (
         <urlcontext.Provider value={value}>
