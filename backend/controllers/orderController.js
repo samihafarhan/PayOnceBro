@@ -3,14 +3,15 @@ import * as riderModel from '../models/riderModel.js'
 import * as restaurantModel from '../models/restaurantModel.js'
 import * as menuModel from '../models/menuModel.js'
 import * as clusterModel from '../models/clusterModel.js'
+import * as subOrderModel from '../models/subOrderModel.js'
 import * as deliveryFeeService from '../services/deliveryFeeService.js'
 import { estimateDeliveryTime } from '../services/clusteringService.js'
 import { findBestRider } from '../services/riderAssignmentService.js'
-import { startSimulatedOrderFlow } from '../services/orderSimulationService.js'
 
 const RESTAURANT_ALLOWED = {
   pending: ['accepted', 'cancelled'],
   accepted: ['preparing', 'cancelled'],
+  preparing: ['pickup', 'cancelled'],
 }
 
 const RIDER_ALLOWED = {
@@ -97,6 +98,7 @@ export const placeOrder = async (req, res, next) => {
       priceAtOrder: menuMap.get(i.menuItemId).price,
     }))
     await orderModel.createItems(order.id, itemPayload)
+    await subOrderModel.createForOrder(order.id, restaurantIds)
     let historyWriteFailed = false
     try {
       await orderModel.insertStatusHistory(order.id, 'pending', req.user.id)
@@ -228,7 +230,6 @@ export const updateStatus = async (req, res, next) => {
         console.error(`❌ Rider assignment failed for order ${orderId}:`, assignErr?.message || assignErr)
       }
 
-      startSimulatedOrderFlow(orderId, req.user.id)
     }
 
     if (status === 'delivered' && role === 'rider') {
