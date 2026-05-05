@@ -7,12 +7,10 @@ import * as clusterModel from '../models/clusterModel.js'
 import * as deliveryFeeService from '../services/deliveryFeeService.js'
 import { estimateDeliveryTime } from '../services/clusteringService.js'
 import { findBestRider } from '../services/riderAssignmentService.js'
-import { generateMenuTags, generateVibeSummary } from '../services/geminiService.js'
 import * as riderModel from '../models/riderModel.js'
-import { generateMenuTags } from '../services/geminiService.js'
 import supabase from '../config/db.js'
-import { generateVibeSummary } from '../services/geminiService.js'
-import { buildMenuTags } from '../services/menuTaggingService.js'
+import { generateMenuTags, generateVibeSummary } from '../services/geminiService.js'
+import { buildMenuTags, inferFallbackTags } from '../services/menuTaggingService.js'
 import { startSimulatedOrderFlow } from '../services/orderSimulationService.js'
 
 const VIBE_CACHE_TTL_MS = 60 * 60 * 1000
@@ -199,18 +197,6 @@ export const getOrders = async (req, res, next) => {
     if (allOrders.length === 0) {
       return res.json({ pending: [], preparing: [], pickup: [], completed: [] })
     }
-
-    const riderIds = [...new Set(allOrders.map((o) => o.rider_id).filter(Boolean))]
-    const riders = await riderModel.getByIdsWithProfiles(riderIds)
-    const ridersById = riders.reduce((acc, rider) => {
-      const profile = rider.profile || {}
-      acc[rider.id] = {
-        id: rider.id,
-        fullName: profile.full_name || profile.username || 'Rider',
-        email: profile.email || null,
-      }
-      return acc
-    }, {})
 
     // Fetch cluster details for any clustered orders
     const clusterIds = [...new Set(allOrders.filter((o) => o.cluster_id).map((o) => o.cluster_id))]

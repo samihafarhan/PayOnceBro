@@ -1,22 +1,46 @@
 import axios from 'axios'
 import supabase from '../lib/supabase'
 
+let cachedAccessToken = null
+let didInitTokenListener = false
+
+const ensureTokenListener = () => {
+  if (didInitTokenListener) return
+  didInitTokenListener = true
+
+  // Seed once on module init.
+  supabase.auth
+    .getSession()
+    .then(({ data: { session } }) => {
+      cachedAccessToken = session?.access_token ?? null
+    })
+    .catch(() => {
+      cachedAccessToken = null
+    })
+
+  supabase.auth.onAuthStateChange((_event, session) => {
+    cachedAccessToken = session?.access_token ?? null
+  })
+}
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
 })
 
-// Attach the Supabase session token when available. Never block the request if
-// getSession() rejects or misbehaves — otherwise axios never leaves the client.
 api.interceptors.request.use(async (config) => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session?.access_token) {
-      config.headers.Authorization = `Bearer ${session.access_token}`
-    }
-  } catch (e) {
-    console.warn('[api] getSession failed; continuing without auth header', e?.message || e)
+  ensureTokenListener()
+
+  if (!cachedAccessToken) return config
+
+  const nextHeaders = {
+    ...(config.headers || {}),
+    Authorization: `Bearer ${cachedAccessToken}`,
   }
-  return config
+
+  return {
+    ...config,
+    headers: nextHeaders,
+  }
 })
 
 export default api

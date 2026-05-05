@@ -50,7 +50,11 @@ export async function getCurrentUser() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) return null
 
-    const { data } = await api.get('/auth/me')
+    const { data } = await api.get('/auth/me', {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    })
     return data.user
   } catch {
     return null

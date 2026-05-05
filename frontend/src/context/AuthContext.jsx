@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import useFetch from "../hooks/useFetch";
 import { getCurrentUser, logout as apiLogout } from "../services/authService";
@@ -9,6 +9,7 @@ const urlcontext = createContext()
 const UrlProvider = ({children}) => {
     const {data:user, loading, fn:fetchuser} = useFetch(getCurrentUser)
     const [isSessionLoaded, setIsSessionLoaded] = useState(false)
+    const didBootstrapRef = useRef(false)
     const isAuthenticated = Boolean(user && (user.aud === "authenticated" || user.email))
 
     const logout = async () => {
@@ -23,14 +24,25 @@ const UrlProvider = ({children}) => {
     useEffect(() => {
         let timeoutId
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event) => {
+            async (event, session) => {
                 if (event === 'INITIAL_SESSION') {
                     setIsSessionLoaded(true)
-                    // Fetch user once on the initial session event (covers both
-                    // "already logged in on page load" and "not logged in" cases)
+                    if (!didBootstrapRef.current) {
+                        didBootstrapRef.current = true
+                        // Fetch user once on the initial session event (covers both
+                        // "already logged in on page load" and "not logged in" cases)
+                        fetchuser()
+                    }
+                } else if (event === 'SIGNED_IN') {
+                    // SIGNED_IN can follow quickly after initial load; avoid double-fetches.
+                    if (!didBootstrapRef.current) {
+                        didBootstrapRef.current = true
+                    }
                     fetchuser()
-                } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                    fetchuser()
+                } else if (event === 'TOKEN_REFRESHED') {
+                    // Token refresh happens frequently; avoid spamming /auth/me.
+                    // Session is already updated client-side.
+                    if (!session) return
                 } else if (event === 'SIGNED_OUT') {
                     fetchuser()
                 }
@@ -42,7 +54,10 @@ const UrlProvider = ({children}) => {
         timeoutId = setTimeout(() => {
             setIsSessionLoaded((prev) => {
                 if (prev) return prev
-                fetchuser()
+                if (!didBootstrapRef.current) {
+                    didBootstrapRef.current = true
+                    fetchuser()
+                }
                 return true
             })
         }, 2500)
