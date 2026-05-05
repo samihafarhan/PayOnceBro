@@ -60,7 +60,13 @@ export const register = async (req, res, next) => {
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert(
-          { id: data.user.id, username, full_name: resolvedFullName, role: normalizedRole },
+          {
+            id: data.user.id,
+            username,
+            full_name: resolvedFullName,
+            role: normalizedRole,
+            email,
+          },
           { onConflict: 'id' }
         );
       if (profileError) {

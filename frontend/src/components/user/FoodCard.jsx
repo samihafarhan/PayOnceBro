@@ -75,11 +75,6 @@ const FoodCard = ({ item, onAddToCart }) => {
                <span className="text-sm">🍽️</span>
                <span className="truncate">{restaurant.name}</span>
             </div>
-            {restaurant.avgRating > 0 && (
-              <span className="flex items-center gap-0.5 text-amber-500 font-medium shrink-0 ml-2">
-                ⭐ {Number(restaurant.avgRating).toFixed(1)}
-              </span>
-            )}
           </div>
           
           {distanceKm !== null && (
