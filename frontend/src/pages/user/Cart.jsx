@@ -68,10 +68,9 @@ const Cart = () => {
   // Apply saved profile delivery location when available (overrides stale session storage).
   useEffect(() => {
     if (!isSessionLoaded || !userId || userRole !== 'user') return
-    const lat = Number(userDeliveryLat)
-    const lng = Number(userDeliveryLng)
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
-    setUserLocation(lat, lng)
+    const parsed = parseLatLng(userDeliveryLat, userDeliveryLng)
+    if (!parsed) return
+    setUserLocation(parsed.lat, parsed.lng)
   }, [isSessionLoaded, userId, userRole, userDeliveryLat, userDeliveryLng, setUserLocation])
 
   // Keep the local "granted" indicator in sync with context (covers the case
