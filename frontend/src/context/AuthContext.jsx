@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout as apiLogout } from "../services/authService";
 import supabase from "../lib/supabase";
@@ -10,17 +10,33 @@ const UrlProvider = ({children}) => {
     const [loading, setLoading] = useState(false)
     const [isSessionLoaded, setIsSessionLoaded] = useState(false)
     const didBootstrapRef = useRef(false)
+    const isFetchingRef = useRef(false)
     const isAuthenticated = Boolean(user && (user.aud === "authenticated" || user.email))
 
     const fetchuser = useCallback(async () => {
+        if (isFetchingRef.current) return
+        isFetchingRef.current = true
         setLoading(true)
         try {
             const data = await getCurrentUser()
-            setUser(data)
+            // Only update state if data actually changed to prevent render loops
+            setUser(prev => {
+                if (!data) return null
+                if (!prev) return data
+                // Shallow check of critical fields to avoid unnecessary re-renders
+                if (prev.id === data.id && 
+                    prev.role === data.role && 
+                    prev.delivery_lat === data.delivery_lat &&
+                    prev.delivery_lng === data.delivery_lng) {
+                    return prev
+                }
+                return data
+            })
         } catch (error) {
             console.error('Error fetching user:', error)
         } finally {
             setLoading(false)
+            isFetchingRef.current = false
         }
     }, [])
 
@@ -44,8 +60,6 @@ const UrlProvider = ({children}) => {
 
                 if (session && !didBootstrapRef.current) {
                     didBootstrapRef.current = true
-                    // Optimistically set the user from session metadata so the app can render
-                    // dashboard/auth routes immediately without waiting for the backend.
                     const sessionUser = session.user
                     setUser({
                         ...sessionUser,
@@ -53,7 +67,6 @@ const UrlProvider = ({children}) => {
                         full_name: sessionUser.user_metadata?.full_name || null,
                         username: sessionUser.user_metadata?.username || null,
                     })
-                    // Start background fetch for the full profile (delivery coords, etc.)
                     fetchuser()
                 }
                 setIsSessionLoaded(true)
@@ -84,9 +97,16 @@ const UrlProvider = ({children}) => {
                 if (event === 'SIGNED_IN') {
                     if (session) {
                         const sessionUser = session.user
-                        setUser(prev => prev ? { ...prev, ...sessionUser } : {
-                            ...sessionUser,
-                            role: sessionUser.user_metadata?.role || 'user',
+                        const sessionRole = sessionUser.user_metadata?.role || 'user'
+                        setUser(prev => {
+                            // If we already have a user with the same ID and role, don't trigger a re-render
+                            if (prev && prev.id === sessionUser.id && prev.role === sessionRole) {
+                                return prev
+                            }
+                            return prev ? { ...prev, ...sessionUser } : {
+                                ...sessionUser,
+                                role: sessionRole,
+                            }
                         })
                     }
                     fetchuser()
@@ -106,8 +126,12 @@ const UrlProvider = ({children}) => {
         }
     }, [fetchuser])
 
+    const value = useMemo(() => ({
+        user, fetchuser, loading, isAuthenticated, isSessionLoaded, logout
+    }), [user, fetchuser, loading, isAuthenticated, isSessionLoaded])
+
     return (
-        <urlcontext.Provider value={{user, fetchuser, loading, isAuthenticated, isSessionLoaded, logout}}>
+        <urlcontext.Provider value={value}>
             {children}
         </urlcontext.Provider>
     )
@@ -142,3 +166,4 @@ export const useAuthCheck = (skipCheck = false) => {
         logout
     }
 }
+
